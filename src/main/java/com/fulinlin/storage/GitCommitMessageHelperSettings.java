@@ -5,6 +5,7 @@ import com.fulinlin.localization.PluginBundle;
 import com.fulinlin.model.CentralSettings;
 import com.fulinlin.model.DataSettings;
 import com.fulinlin.model.TypeAlias;
+import com.fulinlin.model.AISettings;
 import com.fulinlin.model.enums.TypeDisplayStyleEnum;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
@@ -31,6 +32,8 @@ public class GitCommitMessageHelperSettings implements PersistentStateComponent<
 
     private CentralSettings centralSettings;
 
+    private AISettings aiSettings;
+
     public GitCommitMessageHelperSettings() {
     }
 
@@ -45,12 +48,18 @@ public class GitCommitMessageHelperSettings implements PersistentStateComponent<
         if (centralSettings == null) {
             loadDefaultCentralSettings();
         }
+        if (aiSettings == null) {
+            aiSettings = new AISettings();
+        }
         return this;
     }
 
     @Override
     public void loadState(@NotNull GitCommitMessageHelperSettings gitCommitMessageHelperSettings) {
         XmlSerializerUtil.copyBean(gitCommitMessageHelperSettings, this);
+        if (aiSettings == null) {
+            aiSettings = new AISettings();
+        }
     }
 
 
@@ -71,6 +80,17 @@ public class GitCommitMessageHelperSettings implements PersistentStateComponent<
             checkDefaultDataSettings(dataSettings);
         }
         return dataSettings;
+    }
+
+    public AISettings getAISettings() {
+        if (aiSettings == null) {
+            aiSettings = new AISettings();
+        }
+        return aiSettings;
+    }
+
+    public void setAISettings(AISettings aiSettings) {
+        this.aiSettings = aiSettings;
     }
 
 
