@@ -20,11 +20,34 @@
 - [ ] 保持原有配置和功能不变
 
 ### 2.2 Phase 2: API与分析集成（第3-4周）
-- [ ] 实现`DeepSeekAPIClient`，兼容OpenAI风格API
-- [ ] 实现`CodeChangeAnalyzer`，利用IntelliJ Git API获取diff和变更文件
-- [ ] 实现`PromptBuilder`，生成符合规范的AI提示词，输出格式与现有模板一致
-- [ ] 实现`AIGeneratorService`，串联分析、提示词、API调用、响应解析
-- [ ] 单元测试与接口测试
+- [ ] 设计并实现`CodeChangeAnalyzer`类及其接口
+    - [ ] 集成IntelliJ Git API，获取当前变更的文件列表
+    - [ ] 获取每个变更文件的diff内容
+    - [ ] 支持识别变更类型（新增、修改、删除）
+    - [ ] 封装变更信息为`CodeChangeInfo`和`FileChange`数据模型
+    - [ ] 单元测试：模拟不同变更场景，验证分析结果
+- [ ] 设计并实现`PromptBuilder`类及其接口
+    - [ ] 根据`CodeChangeInfo`生成AI提示词（Prompt），符合Conventional Commits规范
+    - [ ] 支持多语言/多模板扩展（如有需求）
+    - [ ] 单元测试：不同变更输入下的Prompt生成正确性
+- [ ] 设计并实现`DeepSeekAPIClient`类及其接口
+    - [ ] 实现OpenAI风格API的请求体构建（model、messages、max_tokens、temperature等）
+    - [ ] 实现API调用（POST请求，带鉴权Header）
+    - [ ] 解析API响应，提取AI生成的commit message文本
+    - [ ] 支持API连接测试（如“Test Connection”按钮）
+    - [ ] 错误处理与异常抛出（如网络、鉴权、超时等）
+    - [ ] 单元测试：模拟API响应、异常场景
+- [ ] 设计并实现`AIGeneratorService`类及其接口
+    - [ ] 串联`CodeChangeAnalyzer`、`PromptBuilder`、`DeepSeekAPIClient`，实现完整AI生成流程
+    - [ ] 支持异步调用（如CompletableFuture）
+    - [ ] 解析AI响应为`CommitTemplate`对象
+    - [ ] 错误处理与降级逻辑（如AI失败时不影响手动提交）
+    - [ ] 单元测试：端到端流程、异常流程
+- [ ] 集成与测试
+    - [ ] 集成各模块，确保数据流通畅
+    - [ ] 编写端到端集成测试，验证AI生成流程
+    - [ ] 编写接口测试，验证各模块边界条件
+    - [ ] 文档补充：各类接口说明、用例说明
 
 ### 2.3 Phase 3: UI集成与最小增强（第5-6周）
 - [ ] 在`CommitPanel.form`和`CommitPanel.java`中添加AI按钮（推荐放在typePanel右侧）
