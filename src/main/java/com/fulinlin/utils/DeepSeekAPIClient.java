@@ -1,6 +1,8 @@
 package com.fulinlin.utils;
 
 import com.fulinlin.model.AISettings;
+import com.fulinlin.utils.IDENotificationUtil;
+import com.intellij.openapi.project.Project;
 import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -23,6 +25,39 @@ public class DeepSeekAPIClient {
                 .readTimeout(60, TimeUnit.SECONDS)
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .build();
+    }
+
+    /**
+     * 生成commit message（异步），带IDEA通知
+     * @param prompt AI提示词
+     * @param project 当前项目
+     * @return CompletableFuture<String> AI生成内容
+     */
+    public CompletableFuture<String> generateMessage(String prompt, Project project) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                String requestBody = buildRequestBody(prompt);
+                Request request = new Request.Builder()
+                        .url(settings.getApiEndpoint())
+                        .addHeader("Authorization", "Bearer " + settings.getApiKey())
+                        .addHeader("Content-Type", "application/json")
+                        .post(RequestBody.create(requestBody, MediaType.get("application/json")))
+                        .build();
+
+                try (Response response = httpClient.newCall(request).execute()) {
+                    if (!response.isSuccessful()) {
+                        String msg = "API调用失败: " + response.code() + " - " + response.message();
+                        IDENotificationUtil.notifyError(project, "DeepSeek API调用失败", msg);
+                        throw new IOException(msg);
+                    }
+                    String responseBody = response.body().string();
+                    return parseResponse(responseBody);
+                }
+            } catch (Exception e) {
+                IDENotificationUtil.notifyError(project, "DeepSeek API调用异常", e.getMessage());
+            }
+            return "Error";
+        });
     }
 
     /**
