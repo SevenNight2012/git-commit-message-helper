@@ -8,3 +8,7 @@ build/
 gradlew
 gradlew.bat
 .kotlintest
+/prev/
+/local.properties
+/desgin/
+/bin/
