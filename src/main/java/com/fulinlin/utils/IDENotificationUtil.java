@@ -8,7 +8,16 @@ import com.intellij.openapi.wm.StatusBar;
 import com.intellij.openapi.wm.WindowManager;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.ui.components.JBScrollPane;
+import com.intellij.ui.components.JBTextArea;
+import com.intellij.util.ui.JBUI;
+
+import javax.swing.*;
 import javax.swing.Timer;
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 
 /**
  * IntelliJ IDEA 多种通知方式工具类
@@ -41,11 +50,11 @@ public class IDENotificationUtil {
         } catch (Exception e) {
             LOG.warn("Status bar failed", e);
         }
-        // 方案3: 使用对话框（最后备选）
+        // 方案3: 使用可复制的对话框（最后备选）
         try {
             ApplicationManager.getApplication().invokeLater(() -> {
                 try {
-                    Messages.showErrorDialog(content, title);
+                    showCopyableDialog(title, content, Messages.getErrorIcon());
                 } catch (Exception e) {
                     LOG.error("All notification methods failed", e);
                 }
@@ -78,11 +87,11 @@ public class IDENotificationUtil {
         } catch (Exception e) {
             LOG.warn("Status bar failed", e);
         }
-        // 方案3: 用信息对话框
+        // 方案3: 用可复制的信息对话框
         try {
             ApplicationManager.getApplication().invokeLater(() -> {
                 try {
-                    Messages.showInfoMessage(content, title);
+                    showCopyableDialog(title, content, Messages.getInformationIcon());
                 } catch (Exception e) {
                     LOG.error("All notification methods failed", e);
                 }
@@ -115,11 +124,11 @@ public class IDENotificationUtil {
         } catch (Exception e) {
             LOG.warn("Status bar failed", e);
         }
-        // 方案3: 用警告对话框
+        // 方案3: 用可复制的警告对话框
         try {
             ApplicationManager.getApplication().invokeLater(() -> {
                 try {
-                    Messages.showWarningDialog(content, title);
+                    showCopyableDialog(title, content, Messages.getWarningIcon());
                 } catch (Exception e) {
                     LOG.error("All notification methods failed", e);
                 }
@@ -172,17 +181,93 @@ public class IDENotificationUtil {
         } catch (Exception e) {
             LOG.warn("Status bar failed", e);
         }
-        // 方案3: 用信息对话框
+        // 方案3: 用可复制的信息对话框
         try {
             ApplicationManager.getApplication().invokeLater(() -> {
                 try {
-                    Messages.showInfoMessage(content, title);
+                    showCopyableDialog(title, content, Messages.getInformationIcon());
                 } catch (Exception e) {
                     LOG.error("All notification methods failed", e);
                 }
             });
         } catch (Exception e) {
             LOG.error("All notification methods failed", e);
+        }
+    }
+
+    /**
+     * 显示可复制的对话框
+     */
+    private static void showCopyableDialog(String title, String content, Icon icon) {
+        CopyableMessageDialog dialog = new CopyableMessageDialog(title, content, icon);
+        dialog.show();
+    }
+
+    /**
+     * 可复制的消息对话框
+     */
+    private static class CopyableMessageDialog extends DialogWrapper {
+        private final String content;
+        private final Icon icon;
+
+        public CopyableMessageDialog(String title, String content, Icon icon) {
+            super(true);
+            this.content = content;
+            this.icon = icon;
+            setTitle(title);
+            setResizable(true);
+            init();
+        }
+
+        @Override
+        protected JComponent createCenterPanel() {
+            JPanel panel = new JPanel(new BorderLayout());
+            panel.setPreferredSize(new Dimension(500, 300));
+
+            // 创建可选择的文本区域
+            JBTextArea textArea = new JBTextArea(content);
+            textArea.setEditable(false);
+            textArea.setLineWrap(true);
+            textArea.setWrapStyleWord(true);
+            textArea.setFont(JBUI.Fonts.label());
+            textArea.setBackground(UIManager.getColor("Panel.background"));
+            textArea.setBorder(JBUI.Borders.empty(10));
+
+            // 添加滚动面板
+            JBScrollPane scrollPane = new JBScrollPane(textArea);
+            scrollPane.setBorder(JBUI.Borders.compound(
+                JBUI.Borders.customLine(JBUI.CurrentTheme.DefaultTabs.borderColor()),
+                JBUI.Borders.empty(5)
+            ));
+
+            // 创建按钮面板
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+            // 复制按钮
+            JButton copyButton = new JButton("Copy to Clipboard");
+            copyButton.addActionListener(e -> {
+                StringSelection selection = new StringSelection(content);
+                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                clipboard.setContents(selection, selection);
+            });
+
+            // 确定按钮
+            JButton okButton = new JButton("OK");
+            okButton.addActionListener(e -> close(OK_EXIT_CODE));
+
+            buttonPanel.add(copyButton);
+            buttonPanel.add(okButton);
+
+            // 组装面板
+            panel.add(scrollPane, BorderLayout.CENTER);
+            panel.add(buttonPanel, BorderLayout.SOUTH);
+
+            return panel;
+        }
+
+        @Override
+        protected Action[] createActions() {
+            return new Action[0]; // 不使用默认按钮，使用自定义按钮
         }
     }
 }

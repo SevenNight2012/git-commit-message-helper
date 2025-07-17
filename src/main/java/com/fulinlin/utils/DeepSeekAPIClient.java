@@ -167,13 +167,9 @@ public class DeepSeekAPIClient {
                     }
 
                     String responseBody = response.body().string();
-                    String result = parseResponse(responseBody);
+                    // 连接测试成功：HTTP状态码为2xx表示请求成功
+                    return ConnectionTestResult.success("连接测试成功 (HTTP " + response.code() + ")\n响应内容: " + responseBody);
 
-                    if (result != null && !result.isEmpty()) {
-                        return ConnectionTestResult.success("连接测试成功");
-                    } else {
-                        return ConnectionTestResult.failure("API响应为空", "服务器返回了空响应", null);
-                    }
                 }
             } catch (IOException e) {
                 String details = "网络连接异常: " + e.getMessage();
