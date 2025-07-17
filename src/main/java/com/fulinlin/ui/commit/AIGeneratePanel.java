@@ -70,15 +70,63 @@ public class AIGeneratePanel {
     }
 
     private void initAI() {
-        if (aiSettings != null && aiSettings.isEnabled()) {
+        if (isAIAvailable()) {
             aiGeneratorService = new AIGeneratorService(aiSettings);
             aiGenerateButton.addActionListener(e -> generateWithAI());
+            aiStatusLabel.setText("Ready");
+            aiStatusLabel.setForeground(Color.GRAY);
         } else {
             // Disable AI if not available
             aiGenerateButton.setEnabled(false);
-            aiStatusLabel.setText("AI not available");
+            aiStatusLabel.setText(getAIUnavailableReason());
             aiStatusLabel.setForeground(Color.GRAY);
         }
+    }
+
+    /**
+     * 检查AI功能是否可用
+     */
+    private boolean isAIAvailable() {
+        if (aiSettings == null) {
+            return false;
+        }
+
+        if (!aiSettings.isEnabled()) {
+            return false;
+        }
+
+        if (aiSettings.getApiKey() == null || aiSettings.getApiKey().trim().isEmpty()) {
+            return false;
+        }
+
+        if (aiSettings.getApiEndpoint() == null || aiSettings.getApiEndpoint().trim().isEmpty()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 获取AI不可用的原因
+     */
+    private String getAIUnavailableReason() {
+        if (aiSettings == null) {
+            return "AI settings not configured";
+        }
+
+        if (!aiSettings.isEnabled()) {
+            return "AI is disabled";
+        }
+
+        if (aiSettings.getApiKey() == null || aiSettings.getApiKey().trim().isEmpty()) {
+            return "API Key not configured";
+        }
+
+        if (aiSettings.getApiEndpoint() == null || aiSettings.getApiEndpoint().trim().isEmpty()) {
+            return "API endpoint not configured";
+        }
+
+        return "AI not available";
     }
 
     private void generateWithAI() {
@@ -159,5 +207,35 @@ public class AIGeneratePanel {
 
     public boolean hasContent() {
         return !aiContentTextArea.getText().trim().isEmpty();
+    }
+
+    /**
+     * 触发AI生成（供外部调用）
+     */
+    public void triggerAIGeneration() {
+        if (aiGenerateButton.isEnabled()) {
+            aiGenerateButton.doClick();
+        }
+    }
+
+    /**
+     * 显示指导信息
+     */
+    public void showGuidanceMessage(String message) {
+        aiStatusLabel.setText(message);
+        aiStatusLabel.setForeground(Color.BLUE);
+
+        // 3秒后恢复原始状态
+        Timer timer = new Timer(3000, e -> {
+            if (isAIAvailable()) {
+                aiStatusLabel.setText("Ready");
+                aiStatusLabel.setForeground(Color.GRAY);
+            } else {
+                aiStatusLabel.setText(getAIUnavailableReason());
+                aiStatusLabel.setForeground(Color.GRAY);
+            }
+        });
+        timer.setRepeats(false);
+        timer.start();
     }
 }

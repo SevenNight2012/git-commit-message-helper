@@ -1,13 +1,17 @@
 package com.fulinlin.ui.commit;
 
 import com.fulinlin.localization.PluginBundle;
+import com.fulinlin.model.AISettings;
 import com.fulinlin.model.CommitTemplate;
 import com.fulinlin.storage.GitCommitMessageHelperSettings;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.ui.Messages;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 public class CommitDialog extends DialogWrapper {
 
@@ -16,6 +20,7 @@ public class CommitDialog extends DialogWrapper {
     private final JTabbedPane tabbedPane;
     private final GitCommitMessageHelperSettings settings;
     private final Project project;
+    private boolean aiTabAvailable = false;
 
     public CommitDialog(@Nullable Project project, GitCommitMessageHelperSettings settings, CommitTemplate commitMessageTemplate) {
         super(project);
@@ -29,19 +34,89 @@ public class CommitDialog extends DialogWrapper {
         // Create tabbed pane
         tabbedPane = new JTabbedPane();
         tabbedPane.addTab("Manual Build", commitPanel.getMainPanel());
-        tabbedPane.addTab("AI Generate", aiGeneratePanel.getMainPanel());
+
+        // Check AI availability and add AI tab conditionally
+        aiTabAvailable = isAIAvailable();
+        if (aiTabAvailable) {
+            tabbedPane.addTab("AI Generate", aiGeneratePanel.getMainPanel());
+        }
 
         // Set default tab based on AI availability
-        if (settings.getAISettings() != null && settings.getAISettings().isEnabled()) {
+        if (aiTabAvailable && settings.getAISettings() != null && settings.getAISettings().isEnabled()) {
             tabbedPane.setSelectedIndex(1); // AI Generate tab
         } else {
             tabbedPane.setSelectedIndex(0); // Manual Build tab
         }
 
+        // Add tab change listener for user guidance
+        tabbedPane.addChangeListener(new TabChangeListener());
+
         setTitle(PluginBundle.get("commit.panel.title"));
         setOKButtonText(PluginBundle.get("commit.panel.ok.button"));
         setCancelButtonText(PluginBundle.get("commit.panel.cancel.button"));
         init();
+    }
+
+    /**
+     * 检查AI功能是否可用
+     */
+    private boolean isAIAvailable() {
+        if (settings.getAISettings() == null) {
+            return false;
+        }
+
+        AISettings aiSettings = settings.getAISettings();
+
+        // 检查基本配置
+        if (!aiSettings.isEnabled()) {
+            return false;
+        }
+
+        if (aiSettings.getApiKey() == null || aiSettings.getApiKey().trim().isEmpty()) {
+            return false;
+        }
+
+        if (aiSettings.getApiEndpoint() == null || aiSettings.getApiEndpoint().trim().isEmpty()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 选项卡切换监听器，提供用户引导
+     */
+    private class TabChangeListener implements ChangeListener {
+        @Override
+        public void stateChanged(ChangeEvent e) {
+            int selectedIndex = tabbedPane.getSelectedIndex();
+
+            // 只在AI选项卡被选中时显示提示（如果AI选项卡可用）
+            if (aiTabAvailable && selectedIndex == 1) {
+                showAITabGuidance();
+            }
+        }
+    }
+
+        /**
+     * 显示AI选项卡使用指南
+     */
+    private void showAITabGuidance() {
+        // 检查AI选项卡是否有内容，如果没有则显示提示
+        if (!aiGeneratePanel.hasContent()) {
+            SwingUtilities.invokeLater(() -> {
+                // 使用更简洁的提示，避免过多的弹窗干扰
+                showAITabTooltip();
+            });
+        }
+    }
+
+    /**
+     * 显示AI选项卡提示信息
+     */
+    private void showAITabTooltip() {
+        // 在AI选项卡上显示一个临时的状态提示
+        aiGeneratePanel.showGuidanceMessage("点击'AI Generate'按钮开始生成提交信息");
     }
 
     @Nullable
@@ -54,7 +129,7 @@ public class CommitDialog extends DialogWrapper {
         // Check which tab is currently selected
         int selectedIndex = tabbedPane.getSelectedIndex();
 
-        if (selectedIndex == 1) { // AI Generate tab
+        if (aiTabAvailable && selectedIndex == 1) { // AI Generate tab
             // Return AI generated content as a simple commit message
             String aiContent = aiGeneratePanel.getAIContent();
             if (!aiContent.isEmpty()) {
@@ -80,7 +155,7 @@ public class CommitDialog extends DialogWrapper {
         // Check which tab is currently selected
         int selectedIndex = tabbedPane.getSelectedIndex();
 
-        if (selectedIndex == 1) { // AI Generate tab
+        if (aiTabAvailable && selectedIndex == 1) { // AI Generate tab
             // Return AI content as template
             CommitTemplate commitTemplate = new CommitTemplate();
             String aiContent = aiGeneratePanel.getAIContent();
@@ -94,6 +169,36 @@ public class CommitDialog extends DialogWrapper {
 
         // Manual build tab or fallback
         return commitPanel.getCommitMessageTemplate();
+    }
+
+    /**
+     * 获取当前选中的选项卡索引
+     */
+    public int getSelectedTabIndex() {
+        return tabbedPane.getSelectedIndex();
+    }
+
+    /**
+     * 检查AI选项卡是否可用
+     */
+    public boolean isAITabAvailable() {
+        return aiTabAvailable;
+    }
+
+    /**
+     * 手动切换到AI选项卡（如果可用）
+     */
+    public void switchToAITab() {
+        if (aiTabAvailable) {
+            tabbedPane.setSelectedIndex(1);
+        }
+    }
+
+    /**
+     * 手动切换到手动构建选项卡
+     */
+    public void switchToManualTab() {
+        tabbedPane.setSelectedIndex(0);
     }
 
     private void parseAIContentToTemplate(String aiContent, CommitTemplate template) {
