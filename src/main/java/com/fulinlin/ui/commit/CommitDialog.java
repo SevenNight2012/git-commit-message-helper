@@ -151,6 +151,23 @@ public class CommitDialog extends DialogWrapper {
         return commitPanel.getCommitMessage(settings);
     }
 
+    /**
+     * 获取当前选项卡的commit message字符串
+     * @return commit message字符串
+     */
+    public String getCommitMessageString() {
+        // Check which tab is currently selected
+        int selectedIndex = tabbedPane.getSelectedIndex();
+
+        if (aiTabAvailable && selectedIndex == 1) { // AI Generate tab
+            // Return AI generated content directly
+            return aiGeneratePanel.getAIContent();
+        }
+
+        // Manual build tab or fallback - return the formatted commit message
+        return commitPanel.getCommitMessage(settings).toString();
+    }
+
     public CommitTemplate getCommitMessageTemplate() {
         // Check which tab is currently selected
         int selectedIndex = tabbedPane.getSelectedIndex();

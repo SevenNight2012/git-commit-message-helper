@@ -1,7 +1,6 @@
 package com.fulinlin.ui.commit;
 
 import com.fulinlin.model.AISettings;
-import com.fulinlin.model.CommitTemplate;
 import com.fulinlin.utils.AIGeneratorService;
 import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.openapi.project.Project;
@@ -30,7 +29,7 @@ public class AIGeneratePanel {
     // 重试相关
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private final AtomicInteger retryCount = new AtomicInteger(0);
-    private CompletableFuture<CommitTemplate> currentGenerationTask;
+    private CompletableFuture<String> currentGenerationTask;
 
     public AIGeneratePanel(Project project, AISettings aiSettings) {
         this.project = project;
@@ -187,19 +186,19 @@ public class AIGeneratePanel {
         String templateKey = "conventional_en";
 
         currentGenerationTask = aiGeneratorService.generateCommitMessage(project, templateKey, locale)
-            .thenApply(template -> {
+            .thenApply(content -> {
                 SwingUtilities.invokeLater(() -> {
-                    updateAIContent(template);
+                    updateAIContent(content);
                     setGeneratingState(false);
                     retryCount.set(0); // 重置重试计数
                 });
-                return template;
+                return content;
             })
             .exceptionally(error -> {
                 SwingUtilities.invokeLater(() -> {
                     handleGenerationError(error);
                 });
-                return new CommitTemplate();
+                return "";
             });
     }
 
@@ -298,38 +297,12 @@ public class AIGeneratePanel {
             "已达到最大重试次数。请检查网络连接或稍后重试。");
     }
 
-    private void updateAIContent(CommitTemplate template) {
-        // Build the commit message string from template
-        StringBuilder commitMessage = new StringBuilder();
-
-        // Build the header: type(scope): subject
-        if (template.getType() != null) {
-            commitMessage.append(template.getType());
+    private void updateAIContent(String content) {
+        // Update the AI content text area directly with the generated content
+        if (null != content) {
+            content = content.replaceAll("```","").trim();
         }
-        if (template.getScope() != null && !template.getScope().trim().isEmpty()) {
-            commitMessage.append("(").append(template.getScope()).append(")");
-        }
-        if (template.getSubject() != null) {
-            commitMessage.append(": ").append(template.getSubject());
-        }
-
-        // Add body if present
-        if (template.getBody() != null && !template.getBody().trim().isEmpty()) {
-            commitMessage.append("\n\n").append(template.getBody());
-        }
-
-        // Add breaking changes if present
-        if (template.getChanges() != null && !template.getChanges().trim().isEmpty()) {
-            commitMessage.append("\n\nBREAKING CHANGE: ").append(template.getChanges());
-        }
-
-        // Add closes if present
-        if (template.getCloses() != null && !template.getCloses().trim().isEmpty()) {
-            commitMessage.append("\n\nCloses: ").append(template.getCloses());
-        }
-
-        // Update the AI content text area
-        aiContentTextArea.setText(commitMessage.toString());
+        aiContentTextArea.setText(content);
 
         // Update status
         aiStatusLabel.setText("Generated successfully");
