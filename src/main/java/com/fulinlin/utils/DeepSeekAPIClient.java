@@ -1,6 +1,7 @@
 package com.fulinlin.utils;
 
 import com.fulinlin.model.AISettings;
+import com.fulinlin.model.ConnectionTestResult;
 import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.openapi.project.Project;
 import okhttp3.*;
@@ -122,11 +123,70 @@ public class DeepSeekAPIClient {
 
     /**
      * 测试API Key和连通性
-     * @return true=连通，false=失败
+     * @return CompletableFuture<ConnectionTestResult> 详细的连接测试结果
      */
-    public CompletableFuture<Boolean> testConnection() {
-        // 用一个简单的prompt测试
-        return generateMessage("ping").thenApply(result -> result != null && !result.isEmpty())
-                .exceptionally(e -> false);
+    public CompletableFuture<ConnectionTestResult> testConnection() {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // 验证基本配置
+                if (settings.getApiKey() == null || settings.getApiKey().trim().isEmpty()) {
+                    return ConnectionTestResult.failure("API Key 未配置, 检查API Key设置", null);
+                }
+
+                if (settings.getApiEndpoint() == null || settings.getApiEndpoint().trim().isEmpty()) {
+                    return ConnectionTestResult.failure("API 端点未配置", "请检查API端点设置", null);
+                }
+
+                // 构建测试请求
+                String requestBody = buildRequestBody("ping");
+                Request request = new Request.Builder()
+                        .url(settings.getApiEndpoint())
+                        .addHeader("Authorization", "Bearer " + settings.getApiKey())
+                        .addHeader("Content-Type", "application/json")
+                        .post(RequestBody.create(requestBody, MediaType.get("application/json")))
+                        .build();
+
+                try (Response response = httpClient.newCall(request).execute()) {
+                    if (!response.isSuccessful()) {
+                        String errorBody = "";
+                        if (response.body() != null) {
+                            errorBody = response.body().string();
+                        }
+
+                        String details = String.format("HTTP状态码: %d, 响应: %s", response.code(), errorBody);
+
+                        if (response.code() == 401) {
+                            return ConnectionTestResult.failure("API Key 无效", details, null);
+                        } else if (response.code() == 404) {
+                            return ConnectionTestResult.failure("API 端点不存在", details, null);
+                        } else if (response.code() >= 500) {
+                            return ConnectionTestResult.failure("服务器内部错误", details, null);
+                        } else {
+                            return ConnectionTestResult.failure("API调用失败", details, null);
+                        }
+                    }
+
+                    String responseBody = response.body().string();
+                    String result = parseResponse(responseBody);
+
+                    if (result != null && !result.isEmpty()) {
+                        return ConnectionTestResult.success("连接测试成功");
+                    } else {
+                        return ConnectionTestResult.failure("API响应为空", "服务器返回了空响应", null);
+                    }
+                }
+            } catch (IOException e) {
+                String details = "网络连接异常: " + e.getMessage();
+                if (e.getMessage().contains("connect")) {
+                    return ConnectionTestResult.failure("无法连接到服务器", details, e);
+                } else if (e.getMessage().contains("timeout")) {
+                    return ConnectionTestResult.failure("连接超时", details, e);
+                } else {
+                    return ConnectionTestResult.failure("网络错误", details, e);
+                }
+            } catch (Exception e) {
+                return ConnectionTestResult.failure("未知错误", e.getMessage(), e);
+            }
+        });
     }
 }

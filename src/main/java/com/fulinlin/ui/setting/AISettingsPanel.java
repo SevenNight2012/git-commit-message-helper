@@ -1,6 +1,7 @@
 package com.fulinlin.ui.setting;
 
 import com.fulinlin.model.AISettings;
+import com.fulinlin.model.ConnectionTestResult;
 import com.fulinlin.utils.DeepSeekAPIClient;
 import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.openapi.project.Project;
@@ -204,22 +205,27 @@ public class AISettingsPanel {
         DeepSeekAPIClient client = new DeepSeekAPIClient(testSettings);
 
         // 异步测试连接
-        client.testConnection().thenAccept(success -> {
+        client.testConnection().thenAccept(result -> {
             SwingUtilities.invokeLater(() -> {
                 testConnectionButton.setEnabled(true);
                 testConnectionButton.setText("Test Connection");
 
-                if (success) {
+                if (result.isSuccess()) {
                     if (currentProject != null && currentProject.isDisposed() == false) {
-                        IDENotificationUtil.notifyInfo(currentProject, "AI Connection Test", "Connection successful! AI service is ready to use.");
+                        IDENotificationUtil.notifyInfo(currentProject, "AI Connection Test", result.getMessage());
                     } else {
-                        Messages.showInfoMessage("Connection successful! AI service is ready to use.", "AI Connection Test");
+                        Messages.showInfoMessage(result.getMessage(), "AI Connection Test");
                     }
                 } else {
+                    String errorMessage = result.getMessage();
+                    if (result.getDetails() != null && !result.getDetails().isEmpty()) {
+                        errorMessage += "\n\n详细信息: " + result.getDetails();
+                    }
+
                     if (currentProject != null && currentProject.isDisposed() == false) {
-                        IDENotificationUtil.notifyError(currentProject, "AI Connection Test", "Connection failed. Please check your API key and endpoint.");
+                        IDENotificationUtil.notifyError(currentProject, "AI Connection Test", errorMessage);
                     } else {
-                        Messages.showErrorDialog("Connection failed. Please check your API key and endpoint.", "AI Connection Test");
+                        Messages.showErrorDialog(errorMessage, "AI Connection Test");
                     }
                 }
             });
