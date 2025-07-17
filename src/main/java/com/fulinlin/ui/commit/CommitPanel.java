@@ -49,7 +49,7 @@ public class CommitPanel {
     private AIGeneratorService aiGeneratorService;
 
 
-    public CommitPanel(Project project, GitCommitMessageHelperSettings settings, CommitTemplate commitMessageTemplate) {
+        public CommitPanel(Project project, GitCommitMessageHelperSettings settings, CommitTemplate commitMessageTemplate) {
         this.settings = settings;
         // Personalized UI configuration
         typeDescriptionLabel.setText(PluginBundle.get("commit.panel.type.field"));
@@ -86,6 +86,8 @@ public class CommitPanel {
         }
     }
 
+
+
     private void initAIFeatures(Project project) {
         aiGenerateButton = new JButton("\uD83E\uDD16 AI Generate");
         aiGenerateButton.setToolTipText("Generate commit message with AI");
@@ -99,7 +101,7 @@ public class CommitPanel {
         typePanel.add(aiStatusLabel, BorderLayout.SOUTH);
     }
 
-    private void generateWithAI(Project project) {
+        private void generateWithAI(Project project) {
         aiGenerateButton.setEnabled(false);
         aiStatusLabel.setText("Generating...");
         aiStatusLabel.setForeground(Color.BLUE);
@@ -359,7 +361,7 @@ public class CommitPanel {
         mainPanel.setPreferredSize(new Dimension(730, height));
     }
 
-    CommitMessage getCommitMessage(GitCommitMessageHelperSettings settings) {
+        CommitMessage getCommitMessage(GitCommitMessageHelperSettings settings) {
         TypeAlias type = new TypeAlias();
         if (settings.getCentralSettings().getTypeDisplayStyle() == TypeDisplayStyleEnum.CHECKBOX) {
             if (changeType != null) {
@@ -407,7 +409,7 @@ public class CommitPanel {
         );
     }
 
-    CommitTemplate getCommitMessageTemplate() {
+        CommitTemplate getCommitMessageTemplate() {
         CommitTemplate commitTemplate = new CommitTemplate();
         if (settings.getCentralSettings().getTypeDisplayStyle() == TypeDisplayStyleEnum.CHECKBOX) {
             if (changeType != null) {
