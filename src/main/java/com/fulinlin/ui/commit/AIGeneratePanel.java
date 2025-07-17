@@ -335,9 +335,9 @@ public class AIGeneratePanel {
         aiStatusLabel.setText("Generated successfully");
         aiStatusLabel.setForeground(Color.GREEN);
 
-        // 显示成功通知
-        IDENotificationUtil.notifySuccess(project, "AI Generation Success",
-            "Commit message generated successfully. You can now edit it before committing.");
+        // // 显示成功通知
+        // IDENotificationUtil.notifySuccess(project, "AI Generation Success",
+        //     "Commit message generated successfully. You can now edit it before committing.");
     }
 
     public JPanel getMainPanel() {

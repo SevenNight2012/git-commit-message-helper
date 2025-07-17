@@ -6,8 +6,6 @@ import com.fulinlin.model.CommitTemplate;
 import com.fulinlin.model.TypeAlias;
 import com.fulinlin.model.enums.TypeDisplayStyleEnum;
 import com.fulinlin.storage.GitCommitMessageHelperSettings;
-import com.fulinlin.utils.AIGeneratorService;
-import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.ide.ui.laf.darcula.ui.DarculaEditorTextFieldBorder;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
@@ -18,7 +16,6 @@ import java.awt.*;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Locale;
 import java.util.Enumeration;
 
 
@@ -44,12 +41,8 @@ public class CommitPanel {
     private JComboBox<String> skipCiComboBox;
     private JLabel skipCiLabel;
     private ButtonGroup buttonGroup;
-    private JButton aiGenerateButton;
-    private JLabel aiStatusLabel;
-    private AIGeneratorService aiGeneratorService;
 
-
-        public CommitPanel(Project project, GitCommitMessageHelperSettings settings, CommitTemplate commitMessageTemplate) {
+    public CommitPanel(Project project, GitCommitMessageHelperSettings settings, CommitTemplate commitMessageTemplate) {
         this.settings = settings;
         // Personalized UI configuration
         typeDescriptionLabel.setText(PluginBundle.get("commit.panel.type.field"));
@@ -79,99 +72,9 @@ public class CommitPanel {
         approveCheckBox.setText(PluginBundle.get("commit.panel.skip.ci.checkbox"));
         settingHidden(commitMessageTemplate);
         computePanelHeight();
-
-        // 初始化AI功能
-        if (settings.getAISettings() != null && settings.getAISettings().isEnabled()) {
-            initAIFeatures(project);
-        }
     }
 
 
-
-    private void initAIFeatures(Project project) {
-        aiGenerateButton = new JButton("\uD83E\uDD16 AI Generate");
-        aiGenerateButton.setToolTipText("Generate commit message with AI");
-        aiStatusLabel = new JLabel("Ready");
-        aiStatusLabel.setForeground(Color.GRAY);
-        aiGeneratorService = new AIGeneratorService(settings.getAISettings());
-        aiGenerateButton.addActionListener(e -> generateWithAI(project));
-        // 将AI按钮和状态指示器添加到typePanel右侧
-        typePanel.setLayout(new BorderLayout());
-        typePanel.add(aiGenerateButton, BorderLayout.EAST);
-        typePanel.add(aiStatusLabel, BorderLayout.SOUTH);
-    }
-
-        private void generateWithAI(Project project) {
-        aiGenerateButton.setEnabled(false);
-        aiStatusLabel.setText("Generating...");
-        aiStatusLabel.setForeground(Color.BLUE);
-        Locale locale = Locale.ENGLISH; // 可根据设置或系统自动切换
-        String templateKey = "conventional_en";
-        aiGeneratorService.generateCommitMessage(project, templateKey, locale)
-            .thenAccept(template -> {
-                SwingUtilities.invokeLater(() -> {
-                    updateCommitTemplate(template);
-                    aiGenerateButton.setEnabled(true);
-                });
-            })
-            .exceptionally(error -> {
-                SwingUtilities.invokeLater(() -> {
-                    aiStatusLabel.setText("Generation failed");
-                    aiStatusLabel.setForeground(Color.RED);
-                    IDENotificationUtil.notifyError(project, "AI Generation Error", error.getMessage());
-                    aiGenerateButton.setEnabled(true);
-                });
-                return null;
-            });
-    }
-
-    private void updateCommitTemplate(CommitTemplate template) {
-        if (template.getType() != null) {
-            setSelectedType(template.getType());
-        }
-        if (template.getScope() != null) {
-            changeScope.setText(template.getScope());
-        }
-        if (template.getSubject() != null) {
-            shortDescription.setText(template.getSubject());
-        }
-        if (template.getBody() != null) {
-            longDescription.setText(template.getBody());
-        }
-        if (template.getChanges() != null) {
-            breakingChanges.setText(template.getChanges());
-        }
-        if (template.getCloses() != null) {
-            closedIssues.setText(template.getCloses());
-        }
-        aiStatusLabel.setText("Generated successfully");
-        aiStatusLabel.setForeground(Color.GREEN);
-    }
-
-    private void setSelectedType(String type) {
-        CentralSettings centralSettings = settings.getCentralSettings();
-        if (centralSettings.getTypeDisplayStyle() == TypeDisplayStyleEnum.CHECKBOX || centralSettings.getTypeDisplayStyle() == TypeDisplayStyleEnum.MIXING) {
-            if (changeType != null) {
-                for (int i = 0; i < changeType.getItemCount(); i++) {
-                    TypeAlias alias = changeType.getItemAt(i);
-                    if (alias.getTitle().equals(type)) {
-                        changeType.setSelectedItem(alias);
-                        break;
-                    }
-                }
-            }
-        } else if (centralSettings.getTypeDisplayStyle() == TypeDisplayStyleEnum.RADIO) {
-            if (buttonGroup != null) {
-                for (Enumeration<AbstractButton> e = buttonGroup.getElements(); e.hasMoreElements(); ) {
-                    AbstractButton btn = e.nextElement();
-                    if (btn.getActionCommand().equals(type)) {
-                        btn.setSelected(true);
-                        break;
-                    }
-                }
-            }
-        }
-    }
 
     private void settingHidden(CommitTemplate commitMessageTemplate) {
         CentralSettings centralSettings = settings.getCentralSettings();
