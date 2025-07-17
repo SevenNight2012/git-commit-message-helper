@@ -210,13 +210,13 @@ public class AISettingsPanel {
                 testConnectionButton.setText("Test Connection");
 
                 if (success) {
-                    if (currentProject != null) {
+                    if (currentProject != null && currentProject.isDisposed() == false) {
                         IDENotificationUtil.notifyInfo(currentProject, "AI Connection Test", "Connection successful! AI service is ready to use.");
                     } else {
                         Messages.showInfoMessage("Connection successful! AI service is ready to use.", "AI Connection Test");
                     }
                 } else {
-                    if (currentProject != null) {
+                    if (currentProject != null && currentProject.isDisposed() == false) {
                         IDENotificationUtil.notifyError(currentProject, "AI Connection Test", "Connection failed. Please check your API key and endpoint.");
                     } else {
                         Messages.showErrorDialog("Connection failed. Please check your API key and endpoint.", "AI Connection Test");
@@ -227,7 +227,7 @@ public class AISettingsPanel {
             SwingUtilities.invokeLater(() -> {
                 testConnectionButton.setEnabled(true);
                 testConnectionButton.setText("Test Connection");
-                if (currentProject != null) {
+                if (currentProject != null && currentProject.isDisposed() == false) {
                     IDENotificationUtil.notifyError(currentProject, "AI Connection Test", "Connection failed: " + error.getMessage());
                 } else {
                     Messages.showErrorDialog("Connection failed: " + error.getMessage(), "AI Connection Test");
