@@ -1,5 +1,7 @@
 package com.fulinlin.model;
 
+import com.intellij.openapi.util.text.StringUtil;
+
 /**
  * @program: git-commit-message-helper
  * @author: fulin
@@ -44,7 +46,11 @@ public class CommitTemplate {
     }
 
     public void setBody(String body) {
-        this.body = body;
+        if (StringUtil.isEmpty(body)) {
+            this.body = body;
+        } else {
+            this.body = this.body + "\n" + body;
+        }
     }
 
     public String getChanges() {

@@ -6,8 +6,8 @@ import com.intellij.openapi.project.Project;
 
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * AI生成主流程服务
@@ -47,10 +47,7 @@ public class AIGeneratorService {
 
     /**
      * 解析AI响应为CommitTemplate对象
-     * 支持多种AI响应格式：
-     * 1. 完整的commit message格式：type(scope): subject
-     * 2 解释部分包含详细说明
-     * 3异常数据处理
+     * 按照PromptBuilder中的提示语格式进行解析，兼容CommitPanel.form中的UI组件
      */
     private CommitTemplate parseToCommitTemplate(String aiResponse) {
         CommitTemplate template = new CommitTemplate();
@@ -62,73 +59,26 @@ public class AIGeneratorService {
         try {
             // 按行分割响应
             String[] lines = aiResponse.split("\n");
-            StringBuilder bodyBuilder = new StringBuilder();
-            boolean inCodeBlock = false;
-            boolean inBreakdownSection = false;
-            boolean foundCommitMessage = false;
 
-            for (int i = 0; i < lines.length; i++) {
-                String line = lines[i];
+            for (String line : lines) {
                 String trimmedLine = line.trim();
-
                 if (trimmedLine.isEmpty()) {
                     continue;
                 }
 
-                // 检查是否进入代码块
+                // 移除代码块标记
                 if (trimmedLine.startsWith("```")) {
-                    inCodeBlock = !inCodeBlock;
                     continue;
                 }
 
-                // 如果在代码块内，解析commit message
-                if (inCodeBlock) {
-                    if (isCommitMessageFormat(trimmedLine)) {
-                        parseCommitMessageLine(trimmedLine, template);
-                        foundCommitMessage = true;
-                        continue;
-                    }
-
-                    // 代码块内的其他内容作为body
-                    if (!trimmedLine.startsWith("```")) {
-                        bodyBuilder.append(trimmedLine).append("\n");
-                    }
-                    continue;
-                }
-
-                // 检查是否进入Breakdown部分
-                if (trimmedLine.toLowerCase().contains("breakdown:") ||
-                    trimmedLine.toLowerCase().contains("explanation:") ||
-                    trimmedLine.toLowerCase().contains("说明：") ||
-                    trimmedLine.toLowerCase().contains("解释：")) {
-                    inBreakdownSection = true;
-                    continue;
-                }
-
-                // 如果在Breakdown部分，解析各个字段
-                if (inBreakdownSection) {
-                    parseBreakdownLine(trimmedLine, template);
-                    continue;
-                }
-
-                // 检查是否是commit message格式（不在代码块内的情况）
-                if (!foundCommitMessage && isCommitMessageFormat(trimmedLine)) {
+                // 解析commit message格式: type(scope): subject
+                if (isCommitMessageFormat(trimmedLine)) {
                     parseCommitMessageLine(trimmedLine, template);
-                    foundCommitMessage = true;
                     continue;
                 }
 
-                // 其他内容：如果还没有找到commit message，可能是body内容
-                if (!foundCommitMessage && !trimmedLine.startsWith("Here's") &&
-                    !trimmedLine.toLowerCase().contains("commit message")) {
-                    bodyBuilder.append(trimmedLine).append("\n");
-                }
-            }
-
-            // 设置body内容，清理多余内容
-            String body = cleanBodyContent(bodyBuilder.toString().trim());
-            if (!body.isEmpty()) {
-                template.setBody(body);
+                // 解析各个字段（按照PromptBuilder中的格式）
+                parseFieldLine(trimmedLine, template);
             }
 
             // 如果没有解析到type和subject，尝试从第一行提取
@@ -138,7 +88,6 @@ public class AIGeneratorService {
             }
 
         } catch (Exception e) {
-            // 记录解析异常，但不抛出，返回空的template
             System.err.println("解析AI响应时发生异常: " + e.getMessage());
         }
 
@@ -146,72 +95,39 @@ public class AIGeneratorService {
     }
 
     /**
-     * 清理body内容，移除不需要的部分
+     * 解析各个字段行
      */
-    private String cleanBodyContent(String body) {
-        if (body == null || body.isEmpty()) {
-            return "";
-        }
-
-        // 移除Breakdown部分及其后续内容
-        String[] parts = body.split("(?i)breakdown:");
-        if (parts.length > 1) {
-            body = parts[0].trim();
-        }
-
-        // 移除Explanation部分及其后续内容
-        parts = body.split("(?i)explanation:");
-        if (parts.length > 1) {
-            body = parts[0].trim();
-        }
-
-        // 移除说明部分及其后续内容
-        parts = body.split("说明：");
-        if (parts.length > 1) {
-            body = parts[0].trim();
-        }
-
-        // 移除解释部分及其后续内容
-        parts = body.split("解释：");
-        if (parts.length > 1) {
-            body = parts[0].trim();
-        }
-
-        return body;
-    }
-
-    /**
-     * 解析Breakdown部分的每一行
-     */
-    private void parseBreakdownLine(String line, CommitTemplate template) {
+    private void parseFieldLine(String line, CommitTemplate template) {
         String lowerLine = line.toLowerCase();
 
-        // 解析各个字段
-        if (lowerLine.startsWith("type:") || lowerLine.startsWith("类型：")) {
-            String value = extractFieldValue(line, "type:", "类型：");
+        // 按照PromptBuilder中的字段顺序解析
+        if (lowerLine.startsWith("type:")) {
+            String value = extractFieldValue(line, "type:");
             if (value != null) template.setType(value);
-        } else if (lowerLine.startsWith("scope:") || lowerLine.startsWith("范围：")) {
-            String value = extractFieldValue(line, "scope:", "范围：");
+        } else if (lowerLine.startsWith("scope:")) {
+            String value = extractFieldValue(line, "scope:");
             if (value != null) template.setScope(value);
-        } else if (lowerLine.startsWith("subject:") || lowerLine.startsWith("主题：")) {
-            String value = extractFieldValue(line, "subject:", "主题：");
+        } else if (lowerLine.startsWith("subject:")) {
+            String value = extractFieldValue(line, "subject:");
             if (value != null) template.setSubject(value);
-        } else if (lowerLine.startsWith("body:") || lowerLine.startsWith("正文：")) {
-            String value = extractFieldValue(line, "body:", "正文：");
+        } else if (lowerLine.startsWith("body:")|| lowerLine.startsWith("-")) {
+            String value = extractFieldValue(line, "body:");
             if (value != null) template.setBody(value);
-        } else if (lowerLine.startsWith("breaking changes:") || lowerLine.startsWith("破坏性变更：")) {
-            String value = extractFieldValue(line, "breaking changes:", "破坏性变更：");
-            if (value != null && !value.equalsIgnoreCase("none")) {
+        } else if (lowerLine.startsWith("breaking changes:")) {
+            String value = extractFieldValue(line, "breaking changes:");
+            if (value != null && !value.isEmpty()) {
                 template.setChanges(value);
             }
-        } else if (lowerLine.startsWith("closes:") || lowerLine.startsWith("关闭：")) {
-            String value = extractFieldValue(line, "closes:", "关闭：");
-            if (value != null && !value.equalsIgnoreCase("none")) {
+        } else if (lowerLine.startsWith("closes:")) {
+            String value = extractFieldValue(line, "closes:");
+            if (value != null && !value.isEmpty()) {
                 template.setCloses(value);
             }
-        } else if (lowerLine.startsWith("skip ci:") || lowerLine.startsWith("跳过ci：")) {
-            String value = extractFieldValue(line, "skip ci:", "跳过ci：");
-            if (value != null) template.setSkipCi(value);
+        } else if (lowerLine.startsWith("skip ci:")) {
+            String value = extractFieldValue(line, "skip ci:");
+            if (value != null) {
+                template.setSkipCi(value);
+            }
         }
     }
 
@@ -220,7 +136,7 @@ public class AIGeneratorService {
      */
     private boolean isCommitMessageFormat(String line) {
         // 匹配格式：type(scope): subject 或 type: subject
-        return line.matches("^[a-zA-Z]+(?:\\([^)]+\\))?:\\s+.+$");
+        return line.matches("^[a-zA-Z]+(?:\\([^)]+\\))?:\\s+.+$") || line.startsWith("-");
     }
 
     /**

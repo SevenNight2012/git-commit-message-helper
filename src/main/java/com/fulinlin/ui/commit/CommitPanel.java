@@ -103,8 +103,8 @@ public class CommitPanel {
         aiGenerateButton.setEnabled(false);
         aiStatusLabel.setText("Generating...");
         aiStatusLabel.setForeground(Color.BLUE);
-        Locale locale = Locale.CHINESE; // 可根据设置或系统自动切换
-        String templateKey = "conventional_zh";
+        Locale locale = Locale.ENGLISH; // 可根据设置或系统自动切换
+        String templateKey = "conventional_en";
         aiGeneratorService.generateCommitMessage(project, templateKey, locale)
             .thenAccept(template -> {
                 SwingUtilities.invokeLater(() -> {
