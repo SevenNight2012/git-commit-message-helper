@@ -8,6 +8,7 @@ public class AISettings {
     private double temperature = 0.7;
     private boolean enabled = false;
     private boolean autoGenerate = false;
+    private String promptTemplate = "conventional_zh"; // 默认使用中文提示语
 
     public String getApiKey() {
         return apiKey;
@@ -63,5 +64,13 @@ public class AISettings {
 
     public void setAutoGenerate(boolean autoGenerate) {
         this.autoGenerate = autoGenerate;
+    }
+
+    public String getPromptTemplate() {
+        return promptTemplate;
+    }
+
+    public void setPromptTemplate(String promptTemplate) {
+        this.promptTemplate = promptTemplate;
     }
 }

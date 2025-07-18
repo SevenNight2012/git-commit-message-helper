@@ -188,7 +188,8 @@ public class AIGeneratePanel {
         setGeneratingState(true);
 
         Locale locale = Locale.ENGLISH; // 可根据设置或系统自动切换
-        String templateKey = "conventional_en";
+        // 使用设置中的提示语模板
+        String templateKey = aiSettings.getPromptTemplate();
 
         currentGenerationTask = aiGeneratorService.generateCommitMessage(project, templateKey, locale)
             .thenApply(content -> {

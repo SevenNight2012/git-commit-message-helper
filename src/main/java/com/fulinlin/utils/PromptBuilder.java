@@ -38,9 +38,9 @@ public class PromptBuilder {
     }
 
     /**
-     * 默认英文Conventional Commits模板
+     * 默认中文Conventional Commits模板
      */
     public String buildPrompt(CodeChangeInfo info) {
-        return buildPrompt(info, "conventional_en", Locale.ENGLISH);
+        return buildPrompt(info, "conventional_zh", Locale.CHINESE);
     }
 }

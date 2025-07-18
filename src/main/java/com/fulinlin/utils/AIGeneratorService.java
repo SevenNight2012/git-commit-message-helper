@@ -41,7 +41,9 @@ public class AIGeneratorService {
         })
         .thenCompose(changeInfo -> {
             try {
-                String prompt = promptBuilder.buildPrompt(changeInfo, templateKey, locale);
+                // 使用设置中的提示语模板，如果没有指定则使用传入的templateKey
+                String actualTemplateKey = templateKey != null ? templateKey : settings.getPromptTemplate();
+                String prompt = promptBuilder.buildPrompt(changeInfo, actualTemplateKey, locale);
                 return apiClient.generateMessage(prompt)
                         .exceptionally(error -> {
                             throw new RuntimeException("AI生成失败: " + getErrorMessage(error), error);

@@ -1,7 +1,6 @@
 package com.fulinlin.ui.setting;
 
 import com.fulinlin.model.AISettings;
-import com.fulinlin.model.ConnectionTestResult;
 import com.fulinlin.utils.DeepSeekAPIClient;
 import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.openapi.project.Project;
@@ -36,6 +35,7 @@ public class AISettingsPanel {
     private JSpinner temperatureSpinner;
     private JCheckBox enabledCheckBox;
     private JCheckBox autoGenerateCheckBox;
+    private JComboBox<String> promptTemplateComboBox;
     private JButton testConnectionButton;
     private Project project;
 
@@ -110,7 +110,7 @@ public class AISettingsPanel {
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        modelComboBox = new ComboBox<>(new String[]{"deepseek-chat", "deepseek-reasoner"});
+        modelComboBox = new ComboBox<>(new String[]{"deepseek-chat"});
         apiPanel.add(modelComboBox, gbc);
 
         return apiPanel;
@@ -142,16 +142,28 @@ public class AISettingsPanel {
         temperatureSpinner = new JSpinner(new SpinnerNumberModel(0.7, 0.0, 2.0, 0.1));
         generationPanel.add(temperatureSpinner, gbc);
 
-        // Enable AI
+        // Prompt Template
         gbc.gridx = 0;
         gbc.gridy = 2;
+        generationPanel.add(new JLabel("Prompt Template:"), gbc);
+
+        gbc.gridx = 1;
+        promptTemplateComboBox = new ComboBox<>(new String[]{
+                "conventional_zh - 中文提示语",
+                "conventional_en - 英文提示语"
+        });
+        generationPanel.add(promptTemplateComboBox, gbc);
+
+        // Enable AI
+        gbc.gridx = 0;
+        gbc.gridy = 3;
         gbc.gridwidth = 2;
         enabledCheckBox = new JCheckBox("Enable AI Generation");
         generationPanel.add(enabledCheckBox, gbc);
 
         // Auto Generate
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         autoGenerateCheckBox = new JCheckBox("Auto-generate on commit dialog open");
         generationPanel.add(autoGenerateCheckBox, gbc);
 
@@ -177,6 +189,7 @@ public class AISettingsPanel {
         modelComboBox.setEnabled(enabled);
         maxTokensSpinner.setEnabled(enabled);
         temperatureSpinner.setEnabled(enabled);
+        promptTemplateComboBox.setEnabled(enabled);
         autoGenerateCheckBox.setEnabled(enabled);
         testConnectionButton.setEnabled(enabled);
     }
@@ -268,6 +281,18 @@ public class AISettingsPanel {
         temperatureSpinner.setValue(settings.getTemperature());
         enabledCheckBox.setSelected(settings.isEnabled());
         autoGenerateCheckBox.setSelected(settings.isAutoGenerate());
+
+        // 设置提示语模板选择
+        String promptTemplate = settings.getPromptTemplate();
+        if ("conventional_zh".equals(promptTemplate)) {
+            promptTemplateComboBox.setSelectedIndex(0);
+        } else if ("conventional_en".equals(promptTemplate)) {
+            promptTemplateComboBox.setSelectedIndex(1);
+        } else {
+            // 默认选择中文
+            promptTemplateComboBox.setSelectedIndex(0);
+        }
+
         updateUIState();
     }
 
@@ -280,6 +305,17 @@ public class AISettingsPanel {
         settings.setTemperature((Double) temperatureSpinner.getValue());
         settings.setEnabled(enabledCheckBox.isSelected());
         settings.setAutoGenerate(autoGenerateCheckBox.isSelected());
+
+        // 获取提示语模板选择
+        int selectedIndex = promptTemplateComboBox.getSelectedIndex();
+        if (selectedIndex == 0) {
+            settings.setPromptTemplate("conventional_zh");
+        } else if (selectedIndex == 1) {
+            settings.setPromptTemplate("conventional_en");
+        } else {
+            settings.setPromptTemplate("conventional_zh"); // 默认中文
+        }
+
         return settings;
     }
 
