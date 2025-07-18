@@ -1,5 +1,6 @@
 package com.fulinlin.action;
 
+import com.fulinlin.empty.EmptyCheckInProjectPanel;
 import com.fulinlin.model.CommitTemplate;
 import com.fulinlin.model.MessageStorage;
 import com.fulinlin.storage.GitCommitMessageHelperSettings;
@@ -11,6 +12,7 @@ import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.vcs.CheckinProjectPanel;
 import com.intellij.openapi.vcs.CommitMessageI;
 import com.intellij.openapi.vcs.VcsDataKeys;
 import com.intellij.openapi.vcs.ui.Refreshable;
@@ -42,11 +44,13 @@ public class CreateCommitAction extends AnAction implements DumbAware {
         MessageStorage messageStorage = state.getMessageStorage();
         CommitDialog dialog = new CommitDialog(
                 project, settings,
-                messageStorage.getCommitTemplate()
+                messageStorage.getCommitTemplate(),
+                getGitCommitPanel(actionEvent)
         );
         dialog.show();
         if (dialog.getExitCode() == DialogWrapper.OK_EXIT_CODE) {
             commitPanel.setCommitMessage(dialog.getCommitMessageString());
+
             storage.getMessageStorage().setCommitTemplate(null);
         }
         if (dialog.getExitCode() == DialogWrapper.CANCEL_EXIT_CODE) {
@@ -65,5 +69,13 @@ public class CreateCommitAction extends AnAction implements DumbAware {
             return (CommitMessageI) data;
         }
         return VcsDataKeys.COMMIT_MESSAGE_CONTROL.getData(e.getDataContext());
+    }
+
+    private CheckinProjectPanel getGitCommitPanel(AnActionEvent actionEvent) {
+        CommitMessageI commitPanel = getCommitPanel(actionEvent);
+        if (commitPanel instanceof CheckinProjectPanel) {
+            return (CheckinProjectPanel) commitPanel;
+        }
+        return new EmptyCheckInProjectPanel();
     }
 }

@@ -6,10 +6,13 @@ import com.fulinlin.model.CommitTemplate;
 import com.fulinlin.storage.GitCommitMessageHelperSettings;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
-import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vcs.CheckinProjectPanel;
+
 import org.jetbrains.annotations.Nullable;
 
-import javax.swing.*;
+import javax.swing.JComponent;
+import javax.swing.JTabbedPane;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -22,14 +25,16 @@ public class CommitDialog extends DialogWrapper {
     private final Project project;
     private boolean aiTabAvailable = false;
 
-    public CommitDialog(@Nullable Project project, GitCommitMessageHelperSettings settings, CommitTemplate commitMessageTemplate) {
+    public CommitDialog(@Nullable Project project, GitCommitMessageHelperSettings settings,
+            CommitTemplate commitMessageTemplate,
+            CheckinProjectPanel gitCommitPanel) {
         super(project);
         this.project = project;
         this.settings = settings;
 
         // Initialize panels
         commitPanel = new CommitPanel(project, settings, commitMessageTemplate);
-        aiGeneratePanel = new AIGeneratePanel(project, settings.getAISettings());
+        aiGeneratePanel = new AIGeneratePanel(project, settings.getAISettings(), gitCommitPanel);
 
         // Create tabbed pane
         tabbedPane = new JTabbedPane();
@@ -165,7 +170,7 @@ public class CommitDialog extends DialogWrapper {
         }
 
         // Manual build tab or fallback - return the formatted commit message
-        return commitPanel.getCommitMessage(settings).toString();
+        return this.commitPanel.getCommitMessage(settings).toString();
     }
 
     public CommitTemplate getCommitMessageTemplate() {

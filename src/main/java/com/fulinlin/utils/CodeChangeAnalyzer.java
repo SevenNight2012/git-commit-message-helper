@@ -4,12 +4,13 @@ import com.fulinlin.model.ChangeType;
 import com.fulinlin.model.CodeChangeInfo;
 import com.fulinlin.model.FileChange;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vcs.ProjectLevelVcsManager;
-import com.intellij.openapi.vcs.VcsRoot;
+import com.intellij.openapi.vcs.CheckinProjectPanel;
 import com.intellij.openapi.vcs.changes.Change;
 import com.intellij.openapi.vcs.changes.ChangeListManager;
 import com.intellij.openapi.vcs.changes.ContentRevision;
 import com.intellij.openapi.vfs.VirtualFile;
+
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -20,9 +21,18 @@ import java.util.List;
  */
 public class CodeChangeAnalyzer {
 
+    private final Collection<Change> mSelectedChanges;
+
+    public CodeChangeAnalyzer() {
+        this(null);
+    }
+
+    public CodeChangeAnalyzer(@Nullable CheckinProjectPanel gitPanel) {
+        mSelectedChanges = null == gitPanel ? new ArrayList<>() : gitPanel.getSelectedChanges();
+    }
+
     /**
      * 分析变更的代码
-     * todo 这个方法中是通过project获取所有的变更，但在git提交时，用户可能会只选中部分文件作为一次提交，所以这里还需要能够获取到用户选中的文件的变更，这种情况等到基本功能开发完成后再完善
      * @param project project对象
      * @return 封装的变更信息
      */
@@ -32,7 +42,12 @@ public class CodeChangeAnalyzer {
         try {
             // 使用ChangeListManager获取变更
             ChangeListManager changeListManager = ChangeListManager.getInstance(project);
-            Collection<Change> changes = changeListManager.getAllChanges();
+            Collection<Change> changes;
+            if (null != mSelectedChanges && !mSelectedChanges.isEmpty()) {
+                changes = mSelectedChanges;
+            } else {
+                changes = changeListManager.getAllChanges();
+            }
 
             List<FileChange> fileChanges = new ArrayList<>();
             StringBuilder diffContentBuilder = new StringBuilder();

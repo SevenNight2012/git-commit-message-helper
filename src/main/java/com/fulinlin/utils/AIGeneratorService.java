@@ -5,7 +5,6 @@ import com.intellij.openapi.project.Project;
 
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 /**
  * AI生成主流程服务
@@ -16,9 +15,9 @@ public class AIGeneratorService {
     private final DeepSeekAPIClient apiClient;
     private final AISettings settings;
 
-    public AIGeneratorService(AISettings settings) {
+    public AIGeneratorService(AISettings settings, CodeChangeAnalyzer codeAnalyzer) {
         this.settings = settings;
-        this.analyzer = new CodeChangeAnalyzer();
+        this.analyzer = codeAnalyzer;
         this.promptBuilder = new PromptBuilder();
         this.apiClient = new DeepSeekAPIClient(settings);
     }

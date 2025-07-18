@@ -1,8 +1,10 @@
 package com.fulinlin.ui.commit;
 
+import com.fulinlin.empty.EmptyCheckInProjectPanel;
 import com.fulinlin.model.AISettings;
 import com.fulinlin.model.CommitTemplate;
 import com.fulinlin.storage.GitCommitMessageHelperSettings;
+import com.intellij.openapi.vcs.CheckinProjectPanel;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.junit.Test;
 
@@ -24,7 +26,8 @@ public class CommitDialogTest extends BasePlatformTestCase {
         settings.setAISettings(aiSettings);
 
         CommitTemplate template = new CommitTemplate();
-        CommitDialog dialog = new CommitDialog(getProject(), settings, template);
+        CheckinProjectPanel panel = new EmptyCheckInProjectPanel();
+        CommitDialog dialog = new CommitDialog(getProject(), settings, template, panel);
 
         // 验证AI选项卡可用
         assertTrue("AI选项卡应该可用", dialog.isAITabAvailable());
@@ -40,7 +43,8 @@ public class CommitDialogTest extends BasePlatformTestCase {
         settings.setAISettings(aiSettings);
 
         CommitTemplate template = new CommitTemplate();
-        CommitDialog dialog = new CommitDialog(getProject(), settings, template);
+        CheckinProjectPanel panel = new EmptyCheckInProjectPanel();
+        CommitDialog dialog = new CommitDialog(getProject(), settings, template, panel);
 
         // 验证AI选项卡不可用
         assertFalse("AI选项卡应该不可用", dialog.isAITabAvailable());
@@ -58,7 +62,8 @@ public class CommitDialogTest extends BasePlatformTestCase {
         settings.setAISettings(aiSettings);
 
         CommitTemplate template = new CommitTemplate();
-        CommitDialog dialog = new CommitDialog(getProject(), settings, template);
+        CheckinProjectPanel panel = new EmptyCheckInProjectPanel();
+        CommitDialog dialog = new CommitDialog(getProject(), settings, template, panel);
 
         // 验证AI选项卡不可用
         assertFalse("AI选项卡应该不可用", dialog.isAITabAvailable());
@@ -76,7 +81,8 @@ public class CommitDialogTest extends BasePlatformTestCase {
         settings.setAISettings(aiSettings);
 
         CommitTemplate template = new CommitTemplate();
-        CommitDialog dialog = new CommitDialog(getProject(), settings, template);
+        CheckinProjectPanel panel = new EmptyCheckInProjectPanel();
+        CommitDialog dialog = new CommitDialog(getProject(), settings, template, panel);
 
         // 验证默认选中AI选项卡
         assertEquals("应该默认选中AI选项卡", 1, dialog.getSelectedTabIndex());
@@ -91,7 +97,8 @@ public class CommitDialogTest extends BasePlatformTestCase {
         settings.setAISettings(aiSettings);
 
         CommitTemplate template = new CommitTemplate();
-        CommitDialog dialog = new CommitDialog(getProject(), settings, template);
+        CheckinProjectPanel panel = new EmptyCheckInProjectPanel();
+        CommitDialog dialog = new CommitDialog(getProject(), settings, template, panel);
 
         // 验证默认选中手动选项卡
         assertEquals("应该默认选中手动选项卡", 0, dialog.getSelectedTabIndex());
@@ -108,7 +115,8 @@ public class CommitDialogTest extends BasePlatformTestCase {
         settings.setAISettings(aiSettings);
 
         CommitTemplate template = new CommitTemplate();
-        CommitDialog dialog = new CommitDialog(getProject(), settings, template);
+        CheckinProjectPanel panel = new EmptyCheckInProjectPanel();
+        CommitDialog dialog = new CommitDialog(getProject(), settings, template, panel);
 
         // 测试切换到手动选项卡
         dialog.switchToManualTab();

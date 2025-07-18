@@ -2,8 +2,10 @@ package com.fulinlin.ui.commit;
 
 import com.fulinlin.model.AISettings;
 import com.fulinlin.utils.AIGeneratorService;
+import com.fulinlin.utils.CodeChangeAnalyzer;
 import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.vcs.CheckinProjectPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -25,15 +27,17 @@ public class AIGeneratePanel {
     private AIGeneratorService aiGeneratorService;
     private final AISettings aiSettings;
     private final Project project;
+    private final CheckinProjectPanel gitPanel;
 
     // 重试相关
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private final AtomicInteger retryCount = new AtomicInteger(0);
     private CompletableFuture<String> currentGenerationTask;
 
-    public AIGeneratePanel(Project project, AISettings aiSettings) {
+    public AIGeneratePanel(Project project, AISettings aiSettings, CheckinProjectPanel gitPanel) {
         this.project = project;
         this.aiSettings = aiSettings;
+        this.gitPanel = gitPanel;
         initComponents();
         initAI();
     }
@@ -99,7 +103,8 @@ public class AIGeneratePanel {
 
     private void initAI() {
         if (isAIAvailable()) {
-            aiGeneratorService = new AIGeneratorService(aiSettings);
+            CodeChangeAnalyzer analyzer = new CodeChangeAnalyzer(gitPanel);
+            aiGeneratorService = new AIGeneratorService(aiSettings, analyzer);
             aiGenerateButton.addActionListener(e -> generateWithAI());
             retryButton.addActionListener(e -> retryGeneration());
             aiStatusLabel.setText("Ready");
