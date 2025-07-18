@@ -57,32 +57,58 @@ public class AISettingsPanel {
         mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // API配置面板
-        JPanel apiPanel = createAPIPanel();
-
-        // 生成配置面板
-        JPanel generationPanel = createGenerationPanel();
+        // AI配置面板（合并API和生成设置）
+        JPanel aiConfigPanel = createAIConfigPanel();
 
         // 文件过滤面板
         JPanel filterPanel = createFilterPanel();
 
-        // 按钮面板
+        // 组装主面板
+        mainPanel.add(aiConfigPanel, BorderLayout.NORTH);
+        mainPanel.add(filterPanel, BorderLayout.CENTER);
+    }
+
+    private JPanel createAIConfigPanel() {
+        JPanel aiConfigPanel = new JPanel(new BorderLayout(10, 10));
+        aiConfigPanel.setBorder(BorderFactory.createTitledBorder("AI Configuration"));
+
+        // 创建左侧的API配置面板
+        JPanel apiPanel = createAPIPanel();
+
+        // 创建右侧的生成设置面板
+        JPanel generationPanel = createGenerationPanel();
+
+        // 创建按钮面板
         JPanel buttonPanel = createButtonPanel();
 
-        // 创建一个垂直布局的面板来容纳所有内容面板
-        JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
-        contentPanel.add(apiPanel, BorderLayout.NORTH);
-        contentPanel.add(generationPanel, BorderLayout.CENTER);
-        contentPanel.add(filterPanel, BorderLayout.SOUTH);
+        // 创建左右分栏布局，使用GridBagLayout精确控制宽度比例
+        JPanel contentPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 0, 0, 10);
 
-        // 组装主面板
-        mainPanel.add(contentPanel, BorderLayout.CENTER);
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        // API面板占据45%宽度
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 0.40;
+        contentPanel.add(apiPanel, gbc);
+
+        // Generation面板占据55%宽度
+        gbc.gridx = 1;
+        gbc.weightx = 0.60;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        contentPanel.add(generationPanel, gbc);
+
+        // 组装AI配置面板
+        aiConfigPanel.add(contentPanel, BorderLayout.CENTER);
+        aiConfigPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        return aiConfigPanel;
     }
 
     private JPanel createAPIPanel() {
         JPanel apiPanel = new JPanel(new GridBagLayout());
-        apiPanel.setBorder(BorderFactory.createTitledBorder("API Configuration"));
+        apiPanel.setBorder(BorderFactory.createTitledBorder("API Settings"));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(5,5, 5, 5);
@@ -96,7 +122,7 @@ public class AISettingsPanel {
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        apiKeyField = new JPasswordField(40);
+        apiKeyField = new JPasswordField(25);
         apiPanel.add(apiKeyField, gbc);
 
         // Endpoint
@@ -109,7 +135,7 @@ public class AISettingsPanel {
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        endpointField = new JTextField("https://api.deepseek.com/v1/chat/completions", 40);
+        endpointField = new JTextField("https://api.deepseek.com/v1/chat/completions", 25);
         apiPanel.add(endpointField, gbc);
 
         // Model
@@ -228,7 +254,7 @@ public class AISettingsPanel {
     }
 
     private JPanel createButtonPanel() {
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         testConnectionButton = new JButton("Test Connection");
         buttonPanel.add(testConnectionButton);
         return buttonPanel;
