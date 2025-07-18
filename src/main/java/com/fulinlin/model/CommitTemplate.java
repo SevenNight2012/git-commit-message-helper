@@ -46,10 +46,10 @@ public class CommitTemplate {
     }
 
     public void setBody(String body) {
-        if (StringUtil.isEmpty(body)) {
+        if (StringUtil.isEmpty(this.body)) {
             this.body = body;
         } else {
-            this.body = this.body + "\n" + body;
+            this.body = this.body + "\n" + (null == body ? "" : body);
         }
     }
 
