@@ -2,15 +2,20 @@ package com.fulinlin.utils;
 
 import com.fulinlin.model.AISettings;
 import com.fulinlin.model.ConnectionTestResult;
-import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.openapi.project.Project;
-import okhttp3.*;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 /**
  * DeepSeek API 客户端，兼容OpenAI风格
