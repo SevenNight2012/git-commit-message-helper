@@ -22,13 +22,35 @@ import java.util.List;
 public class CodeChangeAnalyzer {
 
     private final Collection<Change> mSelectedChanges;
+    private FileBlacklistFilter fileBlacklistFilter;
 
     public CodeChangeAnalyzer() {
         this(null);
     }
 
     public CodeChangeAnalyzer(@Nullable CheckinProjectPanel gitPanel) {
+        this(gitPanel, null);
+    }
+
+    public CodeChangeAnalyzer(@Nullable CheckinProjectPanel gitPanel, @Nullable String fileBlacklistConfig) {
         mSelectedChanges = null == gitPanel ? new ArrayList<>() : gitPanel.getSelectedChanges();
+
+        // 初始化文件黑名单过滤器
+        fileBlacklistFilter = new FileBlacklistFilter();
+        if (fileBlacklistConfig != null) {
+            fileBlacklistFilter.initializeFromConfig(fileBlacklistConfig);
+        }
+    }
+
+    /**
+     * 设置文件黑名单配置
+     * @param fileBlacklistConfig 文件黑名单配置字符串
+     */
+    public void setFileBlacklistConfig(String fileBlacklistConfig) {
+        if (fileBlacklistFilter == null) {
+            fileBlacklistFilter = new FileBlacklistFilter();
+        }
+        fileBlacklistFilter.initializeFromConfig(fileBlacklistConfig);
     }
 
     /**
@@ -56,6 +78,12 @@ public class CodeChangeAnalyzer {
             for (Change change : changes) {
                 FileChange fileChange = analyzeChange(change);
                 if (fileChange != null) {
+                    // 应用文件黑名单过滤
+                    if (fileBlacklistFilter != null && fileBlacklistFilter.isFileBlacklisted(fileChange.getFilePath())) {
+                        // 跳过黑名单中的文件
+                        continue;
+                    }
+
                     fileChanges.add(fileChange);
 
                     // 累积diff内容

@@ -9,6 +9,7 @@ public class AISettings {
     private boolean enabled = false;
     private boolean autoGenerate = false;
     private String promptTemplate = "conventional_zh"; // 默认使用中文提示语
+    private String fileBlacklist = ""; // 文件黑名单，每行一个正则表达式规则
 
     public String getApiKey() {
         return apiKey;
@@ -72,5 +73,13 @@ public class AISettings {
 
     public void setPromptTemplate(String promptTemplate) {
         this.promptTemplate = promptTemplate;
+    }
+
+    public String getFileBlacklist() {
+        return fileBlacklist;
+    }
+
+    public void setFileBlacklist(String fileBlacklist) {
+        this.fileBlacklist = fileBlacklist;
     }
 }

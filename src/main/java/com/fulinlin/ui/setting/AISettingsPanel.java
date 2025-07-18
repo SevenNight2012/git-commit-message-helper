@@ -2,6 +2,7 @@ package com.fulinlin.ui.setting;
 
 import com.fulinlin.model.AISettings;
 import com.fulinlin.utils.DeepSeekAPIClient;
+import com.fulinlin.utils.FileBlacklistFilter;
 import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
@@ -21,7 +22,9 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
@@ -36,6 +39,7 @@ public class AISettingsPanel {
     private JCheckBox enabledCheckBox;
     private JCheckBox autoGenerateCheckBox;
     private JComboBox<String> promptTemplateComboBox;
+    private JTextArea fileBlacklistTextArea;
     private JButton testConnectionButton;
     private Project project;
 
@@ -59,12 +63,20 @@ public class AISettingsPanel {
         // 生成配置面板
         JPanel generationPanel = createGenerationPanel();
 
+        // 文件过滤面板
+        JPanel filterPanel = createFilterPanel();
+
         // 按钮面板
         JPanel buttonPanel = createButtonPanel();
 
+        // 创建一个垂直布局的面板来容纳所有内容面板
+        JPanel contentPanel = new JPanel(new BorderLayout(10, 10));
+        contentPanel.add(apiPanel, BorderLayout.NORTH);
+        contentPanel.add(generationPanel, BorderLayout.CENTER);
+        contentPanel.add(filterPanel, BorderLayout.SOUTH);
+
         // 组装主面板
-        mainPanel.add(apiPanel, BorderLayout.NORTH);
-        mainPanel.add(generationPanel, BorderLayout.CENTER);
+        mainPanel.add(contentPanel, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
     }
 
@@ -170,6 +182,51 @@ public class AISettingsPanel {
         return generationPanel;
     }
 
+    private JPanel createFilterPanel() {
+        JPanel filterPanel = new JPanel(new BorderLayout());
+        filterPanel.setBorder(BorderFactory.createTitledBorder("File Filter Settings"));
+
+        // 说明标签
+        JLabel descriptionLabel = new JLabel(
+            "<html>File Blacklist (one pattern per line):<br>" +
+            "Files matching these patterns will be excluded from AI analysis.<br>" +
+            "Supports both regex patterns and wildcard patterns.<br>" +
+            "Regex examples: .*\\.key$, .*\\.pem$, .*config.*, .*\\.env$<br>" +
+            "Wildcard examples: *.md, *.txt, config/*.json, src/**/*.java</html>"
+        );
+        descriptionLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        // 文件黑名单文本区域
+        fileBlacklistTextArea = new JTextArea();
+        fileBlacklistTextArea.setRows(6);
+        fileBlacklistTextArea.setLineWrap(true);
+        fileBlacklistTextArea.setWrapStyleWord(true);
+        fileBlacklistTextArea.setToolTipText(
+            "Enter regex patterns to exclude files from AI analysis.\n" +
+            "One pattern per line. Examples:\n" +
+            ".*\\.key$\n" +
+            ".*\\.pem$\n" +
+            ".*config.*\n" +
+            ".*\\.env$"
+        );
+
+        JScrollPane scrollPane = new JScrollPane(fileBlacklistTextArea);
+        scrollPane.setPreferredSize(new java.awt.Dimension(400, 120));
+
+        // 验证按钮面板
+        JPanel validationPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton validateButton = new JButton("Validate Patterns");
+        validateButton.setToolTipText("Validate regex patterns in the blacklist");
+        validateButton.addActionListener(e -> validateBlacklistPatterns());
+        validationPanel.add(validateButton);
+
+        filterPanel.add(descriptionLabel, BorderLayout.NORTH);
+        filterPanel.add(scrollPane, BorderLayout.CENTER);
+        filterPanel.add(validationPanel, BorderLayout.SOUTH);
+
+        return filterPanel;
+    }
+
     private JPanel createButtonPanel() {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         testConnectionButton = new JButton("Test Connection");
@@ -191,6 +248,7 @@ public class AISettingsPanel {
         temperatureSpinner.setEnabled(enabled);
         promptTemplateComboBox.setEnabled(enabled);
         autoGenerateCheckBox.setEnabled(enabled);
+        fileBlacklistTextArea.setEnabled(enabled);
         testConnectionButton.setEnabled(enabled);
     }
 
@@ -293,6 +351,14 @@ public class AISettingsPanel {
             promptTemplateComboBox.setSelectedIndex(0);
         }
 
+        // 设置文件黑名单
+        String fileBlacklist = settings.getFileBlacklist();
+        if (fileBlacklist != null && !fileBlacklist.isEmpty()) {
+            fileBlacklistTextArea.setText(fileBlacklist);
+        } else {
+            fileBlacklistTextArea.setText("");
+        }
+
         updateUIState();
     }
 
@@ -316,10 +382,33 @@ public class AISettingsPanel {
             settings.setPromptTemplate("conventional_zh"); // 默认中文
         }
 
+        // 获取文件黑名单
+        settings.setFileBlacklist(fileBlacklistTextArea.getText());
+
         return settings;
     }
 
     public void setProject(Project project) {
         this.project = project;
+    }
+
+    /**
+     * 验证黑名单正则表达式模式
+     */
+    private void validateBlacklistPatterns() {
+        String blacklistConfig = fileBlacklistTextArea.getText();
+        FileBlacklistFilter.ValidationResult result = FileBlacklistFilter.validateBlacklistConfig(blacklistConfig);
+
+        if (result.isValid()) {
+            Messages.showInfoMessage(
+                "All regex patterns are valid!",
+                "Blacklist Validation"
+            );
+        } else {
+            Messages.showErrorDialog(
+                "Invalid regex patterns found:\n\n" + result.getErrorMessage(),
+                "Blacklist Validation Error"
+            );
+        }
     }
 }
