@@ -1,17 +1,36 @@
 package com.fulinlin.ui.commit;
 
+import com.fulinlin.localization.PluginBundle;
 import com.fulinlin.model.AISettings;
+import com.fulinlin.storage.GitCommitMessageHelperSettings;
 import com.fulinlin.utils.AIGeneratorService;
 import com.fulinlin.utils.CodeChangeAnalyzer;
 import com.fulinlin.utils.IDENotificationUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vcs.CheckinProjectPanel;
 
-import javax.swing.*;
-import java.awt.*;
+import org.apache.commons.lang3.StringUtils;
+
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 /**
  * AI生成面板，用于AI生成commit message
@@ -28,6 +47,10 @@ public class AIGeneratePanel {
     private final AISettings aiSettings;
     private final Project project;
     private final CheckinProjectPanel gitPanel;
+
+    // 新增关闭issue相关组件
+    private JTextField closedIssuesTextField;
+    private JLabel closedIssuesLabel;
 
     // 重试相关
     private static final int MAX_RETRY_ATTEMPTS = 3;
@@ -77,6 +100,17 @@ public class AIGeneratePanel {
         controlPanel.add(buttonPanel, BorderLayout.NORTH);
         controlPanel.add(statusPanel, BorderLayout.CENTER);
 
+        // 关闭issue输入面板
+        JPanel closedIssuesPanel = new JPanel(new BorderLayout());
+        closedIssuesLabel = new JLabel(PluginBundle.get("commit.panel.closes.field"));
+        closedIssuesLabel.setToolTipText("Enter issue numbers to close (e.g., #123, #456)");
+        closedIssuesTextField = new JTextField();
+        closedIssuesTextField.setToolTipText("Enter issue numbers to close (e.g., #123, #456)");
+
+        closedIssuesPanel.add(closedIssuesLabel, BorderLayout.WEST);
+        closedIssuesPanel.add(closedIssuesTextField, BorderLayout.CENTER);
+        closedIssuesPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+
         // AI Content Area
         aiContentTextArea = new JTextArea();
         aiContentTextArea.setEditable(true);
@@ -91,13 +125,17 @@ public class AIGeneratePanel {
         // Instructions
         aiInstructionsLabel = new JLabel(
             "Click 'AI Generate' to automatically generate a commit message based on your code changes. " +
-            "You can edit the generated message before committing."
+                    "You can edit the generated message before committing. Optionally enter issue numbers to close."
         );
         aiInstructionsLabel.setForeground(Color.GRAY);
 
         // Layout
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.add(closedIssuesPanel, BorderLayout.NORTH);
+        contentPanel.add(scrollPane, BorderLayout.CENTER);
+
         mainPanel.add(controlPanel, BorderLayout.NORTH);
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(contentPanel, BorderLayout.CENTER);
         mainPanel.add(aiInstructionsLabel, BorderLayout.SOUTH);
     }
 
@@ -324,15 +362,121 @@ public class AIGeneratePanel {
     }
 
     public String getAIContent() {
-        return aiContentTextArea.getText().trim();
+        String aiContent = aiContentTextArea.getText().trim();
+        String closedIssues = closedIssuesTextField.getText().trim();
+
+        if (StringUtils.isEmpty(aiContent)) {
+            return "";
+        }
+
+        if (StringUtils.isNotEmpty(closedIssues)) {
+            // 格式化issue
+            String formattedIssues = formatIssues(closedIssues);
+
+            // 如果AI内容已经包含Closes部分，则替换它
+            if (aiContent.contains("Closes:") || aiContent.contains("closes:")) {
+                // 移除现有的Closes部分
+                String[] lines = aiContent.split("\n");
+                StringBuilder newContent = new StringBuilder();
+                boolean skipCloses = false;
+
+                for (String line : lines) {
+                    if (line.trim().toLowerCase().startsWith("closes:")) {
+                        skipCloses = true;
+                        continue;
+                    }
+                    if (skipCloses && line.trim().isEmpty()) {
+                        skipCloses = false;
+                        continue;
+                    }
+                    if (!skipCloses) {
+                        newContent.append(line).append("\n");
+                    }
+                }
+
+                aiContent = newContent.toString().trim();
+            }
+
+            // 添加新的Closes部分
+            return aiContent + "\n\nCloses: " + formattedIssues;
+        }
+
+        return aiContent;
     }
 
     public void setAIContent(String content) {
         aiContentTextArea.setText(content);
     }
 
+    /**
+     * 获取关闭的issue
+     */
+    public String getClosedIssues() {
+        return formatIssues(closedIssuesTextField.getText().trim());
+    }
+
+    /**
+     * 设置关闭的issue
+     */
+    public void setClosedIssues(String closedIssues) {
+        closedIssuesTextField.setText(closedIssues);
+    }
+
+    /**
+     * 获取原始issue输入（未格式化）
+     */
+    public String getRawClosedIssues() {
+        return closedIssuesTextField.getText().trim();
+    }
+
+    /**
+     * 验证issue格式是否正确
+     */
+    public boolean isValidIssueFormat(String issues) {
+        if (StringUtils.isEmpty(issues)) {
+            return true; // 空值是有效的
+        }
+
+        // 简单的格式验证：检查是否包含#号
+        String[] issueArray = issues.split(",");
+        for (String issue : issueArray) {
+            String trimmed = issue.trim();
+            if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 格式化issue字符串，确保格式正确
+     */
+    public String formatIssues(String issues) {
+        if (StringUtils.isEmpty(issues)) {
+            return "";
+        }
+
+        String[] issueArray = issues.split(",");
+        StringBuilder formatted = new StringBuilder();
+
+        for (int i = 0; i < issueArray.length; i++) {
+            String issue = issueArray[i].trim();
+            if (!issue.isEmpty()) {
+                if (!issue.startsWith("#")) {
+                    issue = "#" + issue;
+                }
+                if (i > 0) {
+                    formatted.append(", ");
+                }
+                formatted.append(issue);
+            }
+        }
+
+        return formatted.toString();
+    }
+
     public boolean hasContent() {
-        return !aiContentTextArea.getText().trim().isEmpty();
+        return !aiContentTextArea.getText().trim().isEmpty() || !getRawClosedIssues().isEmpty();
     }
 
     /**
