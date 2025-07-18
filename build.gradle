@@ -58,3 +58,25 @@ changelog {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
 }
+
+// Task to copy built plugin to git_ai_messager directory
+task copyPluginToGitAiMessager(type: Copy, dependsOn: buildPlugin) {
+    description = 'Copy built plugin to git_ai_messager directory'
+    group = 'distribution'
+
+    // Source: built plugin file
+    from buildPlugin.outputs.files
+
+    // Destination: parent directory's git_ai_messager folder
+    into file("${project.rootDir.parent}/git_ai_messager")
+
+    // Include only plugin files
+    include "*.zip"
+
+    doLast {
+        println "Plugin copied to: ${project.rootDir.parent}/git_ai_messager"
+    }
+}
+
+// Make buildPlugin task depend on copyPluginToGitAiMessager to ensure proper execution order
+buildPlugin.finalizedBy copyPluginToGitAiMessager
