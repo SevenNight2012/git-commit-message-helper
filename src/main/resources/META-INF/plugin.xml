@@ -1,9 +1,8 @@
 <idea-plugin>
     <id>commit-message-helper-idea-plugin</id>
     <name>Git Commit Message Helper</name>
-    <vendor email="fulinlin9527@outlook.com" url="https://github.com/AutismSuperman">FuLinLin</vendor>
-    <version>1.4.1</version>
-
+    <vendor email="xuxingchen2016@gmail.com" url="https://github.com/SevenNight2012">xuxingchen</vendor>
+    <version>2.0.0</version>
 
     <description><![CDATA[<p>Description notes will be filled by gradle build</p>]]></description>
 
@@ -52,6 +51,5 @@
             <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
         </action>
     </actions>
-
 
 </idea-plugin>
