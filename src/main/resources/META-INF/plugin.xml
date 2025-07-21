@@ -51,13 +51,6 @@
                 icon="PluginIcons.EDIT">
             <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
         </action>
-        <action
-            id="com.fulinlin.ShowCodeChangeAnalyzerTestUIAction"
-            class="com.fulinlin.action.ShowCodeChangeAnalyzerTestUIAction"
-            text="代码变更分析测试"
-            description="弹出代码变更分析测试窗口">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
-        </action>
     </actions>
 
 
