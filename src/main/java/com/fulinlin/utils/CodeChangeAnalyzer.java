@@ -98,19 +98,10 @@ public class CodeChangeAnalyzer {
             changeInfo.setChangedFiles(fileChanges);
             changeInfo.setDiffContent(diffContentBuilder.toString());
 
-            // 分析整体变更类型
-            ChangeType overallChangeType = analyzeOverallChangeType(fileChanges);
-            changeInfo.setChangeType(overallChangeType);
-
-            // 提取scope（基于变更文件路径）
-            String scope = extractScope(fileChanges);
-            changeInfo.setScope(scope);
-
         } catch (Exception e) {
             // 错误处理：返回空的变更信息
             changeInfo.setChangedFiles(new ArrayList<>());
             changeInfo.setDiffContent("");
-            changeInfo.setChangeType(ChangeType.OTHER);
         }
 
         return changeInfo;
@@ -193,55 +184,5 @@ public class CodeChangeAnalyzer {
         } catch (Exception e) {
             return "";
         }
-    }
-
-    private ChangeType analyzeOverallChangeType(List<FileChange> fileChanges) {
-        if (fileChanges.isEmpty()) {
-            return ChangeType.OTHER;
-        }
-
-        // 统计各类型变更数量
-        long featureCount = fileChanges.stream()
-            .filter(fc -> fc.getChangeType() == ChangeType.FEATURE)
-            .count();
-        long fixCount = fileChanges.stream()
-            .filter(fc -> fc.getChangeType() == ChangeType.FIX)
-            .count();
-        long refactorCount = fileChanges.stream()
-            .filter(fc -> fc.getChangeType() == ChangeType.REFACTOR)
-            .count();
-
-        // 根据主要变更类型确定整体类型
-        if (featureCount > 0) {
-            return ChangeType.FEATURE;
-        } else if (fixCount > 0) {
-            return ChangeType.FIX;
-        } else if (refactorCount > 0) {
-            return ChangeType.REFACTOR;
-        } else {
-            return ChangeType.OTHER;
-        }
-    }
-
-    private String extractScope(List<FileChange> fileChanges) {
-        if (fileChanges.isEmpty()) {
-            return "";
-        }
-
-        // 基于文件路径提取scope
-        // 例如：src/main/java/com/example/core/ -> core
-        String firstFilePath = fileChanges.get(0).getFilePath();
-
-        // 简单的scope提取逻辑
-        if (firstFilePath.contains("/")) {
-            String[] parts = firstFilePath.split("/");
-            for (int i = 0; i < parts.length - 1; i++) {
-                if (parts[i].equals("src") && i + 1 < parts.length) {
-                    return parts[i + 1]; // 返回src后的第一个目录
-                }
-            }
-        }
-
-        return "";
     }
 }
