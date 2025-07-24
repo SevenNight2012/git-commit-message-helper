@@ -25,6 +25,7 @@ dependencies {
     api 'org.apache.commons:commons-text:1.11.0'
     api 'org.json:json:20210307'
     api 'com.squareup.okhttp3:okhttp:5.1.0'
+    api 'io.github.java-diff-utils:java-diff-utils:4.12'
     testImplementation 'junit:junit:4.13.2'
 }
 

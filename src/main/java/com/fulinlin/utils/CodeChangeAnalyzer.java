@@ -3,6 +3,9 @@ package com.fulinlin.utils;
 import com.fulinlin.model.ChangeType;
 import com.fulinlin.model.CodeChangeInfo;
 import com.fulinlin.model.FileChange;
+import com.github.difflib.DiffUtils;
+import com.github.difflib.UnifiedDiffUtils;
+import com.github.difflib.patch.Patch;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vcs.CheckinProjectPanel;
 import com.intellij.openapi.vcs.changes.Change;
@@ -13,6 +16,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -162,25 +166,56 @@ public class CodeChangeAnalyzer {
         }
     }
 
+    // 支持的文本文件扩展名
+    private static final String[] TEXT_FILE_EXTENSIONS = {".java", ".kt", ".xml", ".groovy", ".md", ".txt", ".properties"};
+
+    // 判断是否为文本文件
+    private boolean isTextFile(String filePath) {
+        String lower = filePath.toLowerCase();
+        for (String ext : TEXT_FILE_EXTENSIONS) {
+            if (lower.endsWith(ext)) return true;
+        }
+        return false;
+    }
+
     private String getDiffContent(Change change) {
         try {
+            String filePath = getFilePath(change);
+            if (filePath == null) return "";
+
+            // 判断是否为文本文件
+            if (!isTextFile(filePath)) {
+                // 二进制文件或不支持的类型，仅返回变更类型和文件名
+                return String.format("[Binary or unsupported file] %s", filePath);
+            }
+
             ContentRevision beforeRevision = change.getBeforeRevision();
             ContentRevision afterRevision = change.getAfterRevision();
 
-            if (beforeRevision == null && afterRevision == null) {
-                return "";
-            }
+            String beforeContent = beforeRevision != null ? safeGetContent(beforeRevision) : "";
+            String afterContent = afterRevision != null ? safeGetContent(afterRevision) : "";
 
-            String beforeContent = beforeRevision != null ? beforeRevision.getContent() : "";
-            String afterContent = afterRevision != null ? afterRevision.getContent() : "";
-
-            // 简单的diff内容生成（实际项目中可能需要更复杂的diff算法）
+            // 生成unified diff，仅输出变更内容
             if (!beforeContent.equals(afterContent)) {
-                return "--- Before\n" + beforeContent + "\n+++ After\n" + afterContent;
+                // 按行分割
+                List<String> original = Arrays.asList(beforeContent.split("\\r?\\n"));
+                List<String> revised = Arrays.asList(afterContent.split("\\r?\\n"));
+                Patch<String> patch = DiffUtils.diff(original, revised);
+                List<String> unifiedDiff = UnifiedDiffUtils.generateUnifiedDiff(
+                        filePath, filePath, original, patch, 3);
+                return String.join("\n", unifiedDiff);
             }
-
             return "";
+        } catch (Exception e) {
+            return "[Diff error] " + e.getMessage();
+        }
+    }
 
+    // 安全获取内容，避免null
+    private String safeGetContent(ContentRevision revision) {
+        try {
+            String content = revision.getContent();
+            return content == null ? "" : content;
         } catch (Exception e) {
             return "";
         }
