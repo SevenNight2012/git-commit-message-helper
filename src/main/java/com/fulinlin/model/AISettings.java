@@ -10,6 +10,8 @@ public class AISettings {
     private boolean autoGenerate = false;
     private String promptTemplate = "conventional_zh"; // 默认使用中文提示语
     private String fileBlacklist = ""; // 文件黑名单，每行一个正则表达式规则
+    private String textFileExtensions = ".java,.kt,.xml,.groovy,.md,.txt,.properties"; // 支持的文本文件扩展名，逗号分隔
+    private int diffContextSize = 3; // diff上下文尺寸，默认3
 
     public String getApiKey() {
         return apiKey;
@@ -81,5 +83,21 @@ public class AISettings {
 
     public void setFileBlacklist(String fileBlacklist) {
         this.fileBlacklist = fileBlacklist;
+    }
+
+    public String getTextFileExtensions() {
+        return textFileExtensions;
+    }
+
+    public void setTextFileExtensions(String textFileExtensions) {
+        this.textFileExtensions = textFileExtensions;
+    }
+
+    public int getDiffContextSize() {
+        return diffContextSize;
+    }
+
+    public void setDiffContextSize(int diffContextSize) {
+        this.diffContextSize = diffContextSize;
     }
 }

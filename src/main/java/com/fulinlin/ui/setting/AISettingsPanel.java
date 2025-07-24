@@ -42,6 +42,8 @@ public class AISettingsPanel {
     private JTextArea fileBlacklistTextArea;
     private JButton testConnectionButton;
     private Project project;
+    private JTextField textFileExtensionsField;
+    private JSpinner diffContextSizeSpinner;
 
     public AISettingsPanel() {
         this(null);
@@ -204,6 +206,25 @@ public class AISettingsPanel {
         gbc.gridy = 4;
         autoGenerateCheckBox = new JCheckBox("Auto-generate on commit dialog open");
         generationPanel.add(autoGenerateCheckBox, gbc);
+
+        // 支持的文本文件扩展名
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 1;
+        generationPanel.add(new JLabel("Text File Extensions:"), gbc);
+
+        gbc.gridx = 1;
+        textFileExtensionsField = new JTextField(".java,.kt,.xml,.groovy,.md,.txt,.properties", 25);
+        generationPanel.add(textFileExtensionsField, gbc);
+
+        // diff上下文尺寸
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        generationPanel.add(new JLabel("Diff Context Size:"), gbc);
+
+        gbc.gridx = 1;
+        diffContextSizeSpinner = new JSpinner(new SpinnerNumberModel(3, 0, 20, 1));
+        generationPanel.add(diffContextSizeSpinner, gbc);
 
         return generationPanel;
     }
@@ -385,6 +406,16 @@ public class AISettingsPanel {
             fileBlacklistTextArea.setText("");
         }
 
+        // 设置支持的文本文件扩展名
+        String textFileExtensions = settings.getTextFileExtensions();
+        if (textFileExtensions != null && !textFileExtensions.isEmpty()) {
+            textFileExtensionsField.setText(textFileExtensions);
+        } else {
+            textFileExtensionsField.setText(".java,.kt,.xml,.groovy,.md,.txt,.properties");
+        }
+        // 设置diff上下文尺寸
+        diffContextSizeSpinner.setValue(settings.getDiffContextSize());
+
         updateUIState();
     }
 
@@ -410,6 +441,11 @@ public class AISettingsPanel {
 
         // 获取文件黑名单
         settings.setFileBlacklist(fileBlacklistTextArea.getText());
+
+        // 获取支持的文本文件扩展名
+        settings.setTextFileExtensions(textFileExtensionsField.getText());
+        // 获取diff上下文尺寸
+        settings.setDiffContextSize((Integer) diffContextSizeSpinner.getValue());
 
         return settings;
     }

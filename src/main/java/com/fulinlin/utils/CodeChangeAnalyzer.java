@@ -3,6 +3,7 @@ package com.fulinlin.utils;
 import com.fulinlin.model.ChangeType;
 import com.fulinlin.model.CodeChangeInfo;
 import com.fulinlin.model.FileChange;
+import com.fulinlin.model.AISettings;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.UnifiedDiffUtils;
 import com.github.difflib.patch.Patch;
@@ -28,6 +29,12 @@ public class CodeChangeAnalyzer {
     private final Collection<Change> mSelectedChanges;
     private FileBlacklistFilter fileBlacklistFilter;
 
+    // 默认支持的文本文件扩展名
+    private static final String DEFAULT_TEXT_FILE_EXTENSIONS = ".java,.kt,.xml,.groovy,.md,.txt,.properties";
+    private String[] textFileExtensions = DEFAULT_TEXT_FILE_EXTENSIONS.split(",");
+    private int diffContextSize = 3;
+    private AISettings aiSettings;
+
     public CodeChangeAnalyzer() {
         this(null);
     }
@@ -36,13 +43,23 @@ public class CodeChangeAnalyzer {
         this(gitPanel, null);
     }
 
-    public CodeChangeAnalyzer(@Nullable CheckinProjectPanel gitPanel, @Nullable String fileBlacklistConfig) {
-        mSelectedChanges = null == gitPanel ? new ArrayList<>() : gitPanel.getSelectedChanges();
+    // public CodeChangeAnalyzer(@Nullable CheckinProjectPanel gitPanel, @Nullable String fileBlacklistConfig) {
+    //     this(gitPanel, fileBlacklistConfig, null);
+    // }
 
-        // 初始化文件黑名单过滤器
+    public CodeChangeAnalyzer(@Nullable CheckinProjectPanel gitPanel, @Nullable AISettings aiSettings) {
+        mSelectedChanges = null == gitPanel ? new ArrayList<>() : gitPanel.getSelectedChanges();
         fileBlacklistFilter = new FileBlacklistFilter();
-        if (fileBlacklistConfig != null) {
-            fileBlacklistFilter.initializeFromConfig(fileBlacklistConfig);
+        if (aiSettings != null && aiSettings.getFileBlacklist() != null) {
+            fileBlacklistFilter.initializeFromConfig(aiSettings.getFileBlacklist());
+        }
+        if (aiSettings != null) {
+            this.aiSettings = aiSettings;
+            // 解析扩展名
+            if (aiSettings.getTextFileExtensions() != null && !aiSettings.getTextFileExtensions().isEmpty()) {
+                this.textFileExtensions = aiSettings.getTextFileExtensions().split(",");
+            }
+            this.diffContextSize = aiSettings.getDiffContextSize();
         }
     }
 
@@ -166,14 +183,11 @@ public class CodeChangeAnalyzer {
         }
     }
 
-    // 支持的文本文件扩展名
-    private static final String[] TEXT_FILE_EXTENSIONS = {".java", ".kt", ".xml", ".groovy", ".md", ".txt", ".properties"};
-
-    // 判断是否为文本文件
+    // 判断是否为文本文件（支持自定义扩展名）
     private boolean isTextFile(String filePath) {
         String lower = filePath.toLowerCase();
-        for (String ext : TEXT_FILE_EXTENSIONS) {
-            if (lower.endsWith(ext)) return true;
+        for (String ext : textFileExtensions) {
+            if (lower.endsWith(ext.trim())) return true;
         }
         return false;
     }
@@ -197,12 +211,12 @@ public class CodeChangeAnalyzer {
 
             // 生成unified diff，仅输出变更内容
             if (!beforeContent.equals(afterContent)) {
-                // 按行分割
                 List<String> original = Arrays.asList(beforeContent.split("\\r?\\n"));
                 List<String> revised = Arrays.asList(afterContent.split("\\r?\\n"));
                 Patch<String> patch = DiffUtils.diff(original, revised);
+                int contextSize = this.diffContextSize > 0 ? this.diffContextSize : 3;
                 List<String> unifiedDiff = UnifiedDiffUtils.generateUnifiedDiff(
-                        filePath, filePath, original, patch, 3);
+                        filePath, filePath, original, patch, contextSize);
                 return String.join("\n", unifiedDiff);
             }
             return "";

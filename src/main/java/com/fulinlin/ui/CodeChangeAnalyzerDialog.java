@@ -2,7 +2,9 @@ package com.fulinlin.ui;
 
 import com.fulinlin.model.CodeChangeInfo;
 import com.fulinlin.model.FileChange;
+import com.fulinlin.storage.GitCommitMessageHelperSettings;
 import com.fulinlin.utils.CodeChangeAnalyzer;
+import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.project.Project;
 
 import javax.swing.*;
@@ -15,6 +17,9 @@ import java.util.List;
  * 用于测试CodeChangeAnalyzer的简单UI
  */
 public class CodeChangeAnalyzerDialog extends JFrame {
+
+    private final GitCommitMessageHelperSettings settings;
+
     private JButton analyzeButton;
     private JList<String> fileList;
     private JTextArea diffTextArea;
@@ -22,6 +27,8 @@ public class CodeChangeAnalyzerDialog extends JFrame {
     private CodeChangeInfo lastChangeInfo;
 
     public CodeChangeAnalyzerDialog(Project project) {
+        this.settings = ServiceManager.getService(GitCommitMessageHelperSettings.class);
+
         setTitle("CodeChangeAnalyzer 测试UI");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -62,7 +69,7 @@ public class CodeChangeAnalyzerDialog extends JFrame {
     }
 
     protected void analyzeChanges(Project project) {
-        CodeChangeAnalyzer analyzer = new CodeChangeAnalyzer();
+        CodeChangeAnalyzer analyzer = new CodeChangeAnalyzer(null, this.settings.getAISettings());
         CodeChangeInfo changeInfo = analyzer.analyzeChanges(project);
         this.lastChangeInfo = changeInfo;
         fileListModel.clear();

@@ -142,7 +142,7 @@ public class AIGeneratePanel {
     private void initAI() {
         if (isAIAvailable()) {
             // 创建CodeChangeAnalyzer时传入文件黑名单配置
-            CodeChangeAnalyzer analyzer = new CodeChangeAnalyzer(gitPanel, aiSettings.getFileBlacklist());
+            CodeChangeAnalyzer analyzer = new CodeChangeAnalyzer(gitPanel, aiSettings);
             aiGeneratorService = new AIGeneratorService(aiSettings, analyzer);
             aiGenerateButton.addActionListener(e -> generateWithAI());
             retryButton.addActionListener(e -> retryGeneration());
