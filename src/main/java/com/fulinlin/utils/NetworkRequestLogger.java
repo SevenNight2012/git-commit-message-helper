@@ -87,7 +87,7 @@ public class NetworkRequestLogger {
     private String buildLogEntry(RequestInfo requestInfo, ResponseInfo responseInfo,
                                 Exception exception, String methodName) {
         StringBuilder sb = new StringBuilder();
-        String timestamp = LocalDate.now().atStartOfDay().format(TIMESTAMP_FORMATTER);
+        String timestamp = java.time.LocalDateTime.now().format(TIMESTAMP_FORMATTER);
 
         sb.append("=== Network Request Exception Log ===\n");
         sb.append("Timestamp: ").append(timestamp).append("\n");
@@ -125,7 +125,7 @@ public class NetworkRequestLogger {
      */
     private String buildSuccessLogEntry(RequestInfo requestInfo, ResponseInfo responseInfo, String methodName) {
         StringBuilder sb = new StringBuilder();
-        String timestamp = LocalDate.now().atStartOfDay().format(TIMESTAMP_FORMATTER);
+        String timestamp = java.time.LocalDateTime.now().format(TIMESTAMP_FORMATTER);
         sb.append("=== Network Request Success Log ===\n");
         sb.append("Timestamp: ").append(timestamp).append("\n");
         sb.append("Method: ").append(methodName).append("\n");
@@ -171,7 +171,7 @@ public class NetworkRequestLogger {
     /**
      * 获取日志目录
      */
-    private Path getLogDirectory() {
+    public static Path getLogDirectory() {
         // 使用IntelliJ IDEA的缓存目录
         String cachePath = System.getProperty("idea.system.path");
         if (cachePath == null) {
@@ -239,7 +239,10 @@ public class NetworkRequestLogger {
      * 关闭日志记录器
      */
     public void shutdown() {
-        executorService.shutdown();
+        try {
+            executorService.shutdown();
+        } catch (Exception ignore) {
+        }
     }
 
     /**

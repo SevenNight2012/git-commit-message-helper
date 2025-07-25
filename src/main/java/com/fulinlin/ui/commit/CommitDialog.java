@@ -130,6 +130,14 @@ public class CommitDialog extends DialogWrapper {
         return tabbedPane;
     }
 
+    @Override
+    protected void dispose() {
+        super.dispose();
+        if (aiGeneratePanel != null) {
+            aiGeneratePanel.dispose();
+        }
+    }
+
     /**
      * 获取当前选项卡的commit message字符串
      * @return commit message字符串

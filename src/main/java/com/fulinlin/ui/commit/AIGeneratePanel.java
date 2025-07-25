@@ -6,6 +6,7 @@ import com.fulinlin.storage.GitCommitMessageHelperSettings;
 import com.fulinlin.utils.AIGeneratorService;
 import com.fulinlin.utils.CodeChangeAnalyzer;
 import com.fulinlin.utils.IDENotificationUtil;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vcs.CheckinProjectPanel;
 
@@ -35,7 +36,7 @@ import javax.swing.Timer;
 /**
  * AI生成面板，用于AI生成commit message
  */
-public class AIGeneratePanel {
+public class AIGeneratePanel implements Disposable {
     private JPanel mainPanel;
     private JButton aiGenerateButton;
     private JButton retryButton;
@@ -526,6 +527,13 @@ public class AIGeneratePanel {
             setGeneratingState(false);
             aiStatusLabel.setText("Generation cancelled");
             aiStatusLabel.setForeground(Color.GRAY);
+        }
+    }
+
+    @Override
+    public void dispose() {
+        if (aiGeneratorService != null) {
+            aiGeneratorService.close();
         }
     }
 }

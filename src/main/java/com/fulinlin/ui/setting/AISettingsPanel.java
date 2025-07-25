@@ -4,16 +4,19 @@ import com.fulinlin.model.AISettings;
 import com.fulinlin.utils.DeepSeekAPIClient;
 import com.fulinlin.utils.FileBlacklistFilter;
 import com.fulinlin.utils.IDENotificationUtil;
+import com.fulinlin.utils.NetworkRequestLogger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.util.SystemInfo;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.io.File;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -44,6 +47,7 @@ public class AISettingsPanel {
     private Project project;
     private JTextField textFileExtensionsField;
     private JSpinner diffContextSizeSpinner;
+    private JTextArea logDirectoryField;
 
     public AISettingsPanel() {
         this(null);
@@ -53,6 +57,7 @@ public class AISettingsPanel {
         this.project = project;
         initComponents();
         setupEventHandlers();
+        initializeLogDirectory();
     }
 
     private void initComponents() {
@@ -226,6 +231,22 @@ public class AISettingsPanel {
         diffContextSizeSpinner = new JSpinner(new SpinnerNumberModel(3, 0, 20, 1));
         generationPanel.add(diffContextSizeSpinner, gbc);
 
+        // 网络请求日志目录
+        gbc.gridx = 0;
+        gbc.gridy = 7;
+        gbc.gridwidth = 1;
+        generationPanel.add(new JLabel("Log Directory:"), gbc);
+
+        gbc.gridx = 1;
+        logDirectoryField = new JTextArea(3, 40);
+        logDirectoryField.setEditable(false);
+        logDirectoryField.setLineWrap(true);
+        logDirectoryField.setWrapStyleWord(true);
+        logDirectoryField.setToolTipText("Network request log directory path (read-only)");
+        JScrollPane logDirScrollPane = new JScrollPane(logDirectoryField);
+        logDirScrollPane.setBorder(logDirectoryField.getBorder());
+        generationPanel.add(logDirScrollPane, gbc);
+
         return generationPanel;
     }
 
@@ -297,6 +318,7 @@ public class AISettingsPanel {
         autoGenerateCheckBox.setEnabled(enabled);
         fileBlacklistTextArea.setEnabled(enabled);
         testConnectionButton.setEnabled(enabled);
+        // 日志目录字段始终保持只读状态，不受AI启用状态影响
     }
 
     private void testConnection() {
@@ -452,6 +474,25 @@ public class AISettingsPanel {
 
     public void setProject(Project project) {
         this.project = project;
+    }
+
+    /**
+     * 初始化日志目录路径显示
+     */
+    private void initializeLogDirectory() {
+        try {
+            String logDirectoryPath = getLogDirectoryPath();
+            logDirectoryField.setText(logDirectoryPath);
+        } catch (Exception e) {
+            logDirectoryField.setText("Failed to get log directory path");
+        }
+    }
+
+    /**
+     * 获取日志目录路径
+     */
+    private String getLogDirectoryPath() {
+        return NetworkRequestLogger.getLogDirectory().toString();
     }
 
     /**

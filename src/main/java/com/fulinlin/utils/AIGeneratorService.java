@@ -197,5 +197,10 @@ public class AIGeneratorService {
         }
     }
 
+    public void close() {
+        if (apiClient != null) {
+            apiClient.close();
+        }
+    }
 
 }
