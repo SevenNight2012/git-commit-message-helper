@@ -23,6 +23,7 @@ import okhttp3.Response;
 public class DeepSeekAPIClient {
     private final AISettings settings;
     private final OkHttpClient httpClient;
+    private final NetworkRequestLogger requestLogger;
 
     public DeepSeekAPIClient(AISettings settings) {
         this.settings = settings;
@@ -32,6 +33,7 @@ public class DeepSeekAPIClient {
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(true) // 启用连接失败重试
                 .build();
+        this.requestLogger = new NetworkRequestLogger();
     }
 
     /**
@@ -42,28 +44,43 @@ public class DeepSeekAPIClient {
      */
     public CompletableFuture<String> generateMessage(String prompt, Project project) {
         return CompletableFuture.supplyAsync(() -> {
+            String requestBody = null;
+            Request request = null;
+            Response response = null;
+
             try {
-                String requestBody = buildRequestBody(prompt);
-                Request request = new Request.Builder()
+                requestBody = buildRequestBody(prompt);
+                request = new Request.Builder()
                         .url(settings.getApiEndpoint())
                         .addHeader("Authorization", "Bearer " + settings.getApiKey())
                         .addHeader("Content-Type", "application/json")
                         .post(RequestBody.create(requestBody, MediaType.get("application/json")))
                         .build();
 
-                try (Response response = httpClient.newCall(request).execute()) {
-                    if (!response.isSuccessful()) {
-                        String errorDetails = getErrorDetails(response);
-                        String errorMessage = getErrorMessage(response.code(), errorDetails);
-                        throw new IOException(errorMessage);
-                    }
-                    String responseBody = response.body().string();
-                    return parseResponse(responseBody);
+                response = httpClient.newCall(request).execute();
+                if (!response.isSuccessful()) {
+                    String errorDetails = getErrorDetails(response);
+                    String errorMessage = getErrorMessage(response.code(), errorDetails);
+                    IOException ioException = new IOException(errorMessage);
+
+                    // 记录异常日志
+                    logRequestException(request, response, requestBody, ioException, "generateMessage");
+
+                    throw ioException;
                 }
+                String responseBody = response.body().string();
+                return parseResponse(responseBody);
             } catch (Exception e) {
+                // 记录异常日志
+                logRequestException(request, response, requestBody, e, "generateMessage");
+
                 String errorMessage = getErrorMessage(e);
                 IDENotificationUtil.notifyError(project, "DeepSeek API调用失败", errorMessage);
                 throw new RuntimeException(errorMessage, e);
+            } finally {
+                if (response != null && response.body() != null) {
+                    response.body().close();
+                }
             }
         });
     }
@@ -75,27 +92,42 @@ public class DeepSeekAPIClient {
      */
     public CompletableFuture<String> generateMessage(String prompt) {
         return CompletableFuture.supplyAsync(() -> {
+            String requestBody = null;
+            Request request = null;
+            Response response = null;
+
             try {
-                String requestBody = buildRequestBody(prompt);
-                Request request = new Request.Builder()
+                requestBody = buildRequestBody(prompt);
+                request = new Request.Builder()
                         .url(settings.getApiEndpoint())
                         .addHeader("Authorization", "Bearer " + settings.getApiKey())
                         .addHeader("Content-Type", "application/json")
                         .post(RequestBody.create(requestBody, MediaType.get("application/json")))
                         .build();
 
-                try (Response response = httpClient.newCall(request).execute()) {
-                    if (!response.isSuccessful()) {
-                        String errorDetails = getErrorDetails(response);
-                        String errorMessage = getErrorMessage(response.code(), errorDetails);
-                        throw new IOException(errorMessage);
-                    }
-                    String responseBody = response.body().string();
-                    return parseResponse(responseBody);
+                response = httpClient.newCall(request).execute();
+                if (!response.isSuccessful()) {
+                    String errorDetails = getErrorDetails(response);
+                    String errorMessage = getErrorMessage(response.code(), errorDetails);
+                    IOException ioException = new IOException(errorMessage);
+
+                    // 记录异常日志
+                    logRequestException(request, response, requestBody, ioException, "generateMessage 115");
+
+                    throw ioException;
                 }
+                String responseBody = response.body().string();
+                return parseResponse(responseBody);
             } catch (Exception e) {
+                // 记录异常日志
+                logRequestException(request, response, requestBody, e, "generateMessage exception");
+
                 String errorMessage = getErrorMessage(e);
                 throw new RuntimeException("DeepSeek API调用异常: " + errorMessage, e);
+            } finally {
+                if (response != null && response.body() != null) {
+                    response.body().close();
+                }
             }
         });
     }
@@ -231,24 +263,33 @@ public class DeepSeekAPIClient {
                         .post(RequestBody.create(requestBody, MediaType.get("application/json")))
                         .build();
 
-                try (Response response = httpClient.newCall(request).execute()) {
-                    if (!response.isSuccessful()) {
-                        String errorBody = getErrorDetails(response);
-                        String details = String.format("HTTP状态码: %d, 响应: %s", response.code(), errorBody);
-                        String errorMessage = getErrorMessage(response.code(), errorBody);
-                        return ConnectionTestResult.failure(errorMessage, details, null);
-                    }
+                Response response = httpClient.newCall(request).execute();
+                if (!response.isSuccessful()) {
+                    String errorBody = getErrorDetails(response);
+                    String details = String.format("HTTP状态码: %d, 响应: %s", response.code(), errorBody);
+                    String errorMessage = getErrorMessage(response.code(), errorBody);
 
-                    String responseBody = response.body().string();
-                    // 连接测试成功：HTTP状态码为2xx表示请求成功
-                    return ConnectionTestResult.success("连接测试成功 (HTTP " + response.code() + ")\n响应内容: " + responseBody);
+                    // 记录异常日志
+                    IOException ioException = new IOException(errorMessage);
+                    logRequestException(request, response, requestBody, ioException, "testConnection");
 
+                    return ConnectionTestResult.failure(errorMessage, details, null);
                 }
+
+                String responseBody = response.body().string();
+                // 连接测试成功：HTTP状态码为2xx表示请求成功
+                return ConnectionTestResult.success("连接测试成功 (HTTP " + response.code() + ")\n响应内容: " + responseBody);
             } catch (IOException e) {
+                // 记录异常日志
+                logRequestException(null, null, "ping", e, "testConnection IOException");
+
                 String details = "网络连接异常: " + e.getMessage();
                 String errorMessage = getErrorMessage(e);
                 return ConnectionTestResult.failure(errorMessage, details, e);
             } catch (Exception e) {
+                // 记录异常日志
+                logRequestException(null, null, "ping", e, "testConnection common exception");
+
                 return ConnectionTestResult.failure("未知错误", e.getMessage(), e);
             }
         });
@@ -278,6 +319,15 @@ public class DeepSeekAPIClient {
                         throw new RuntimeException("API调用失败，已重试 " + currentRetry + " 次: " + error.getMessage(), error);
                     }
                 });
+    }
+
+    /**
+     * 关闭客户端，清理资源
+     */
+    public void close() {
+        if (requestLogger != null) {
+            requestLogger.shutdown();
+        }
     }
 
     /**
@@ -311,5 +361,42 @@ public class DeepSeekAPIClient {
         }
 
         return false;
+    }
+
+    /**
+     * 记录网络请求异常日志
+     */
+    private void logRequestException(Request request, Response response, String requestBody,
+                                   Exception exception, String methodName) {
+        try {
+            // 构建请求信息
+            String url = request != null ? request.url().toString() : "";
+            String method = request != null ? request.method() : "";
+            String headers = request != null ? request.headers().toString() : "";
+
+            // 构建响应信息
+            int statusCode = response != null ? response.code() : -1;
+            String responseHeaders = response != null ? response.headers().toString() : "";
+            String responseBody = "";
+            if (response != null && response.body() != null) {
+                try {
+                    responseBody = response.body().string();
+                } catch (Exception e) {
+                    responseBody = "无法读取响应体: " + e.getMessage();
+                }
+            }
+
+            // 创建日志记录对象
+            NetworkRequestLogger.RequestInfo requestInfo =
+                new NetworkRequestLogger.RequestInfo(url, method, headers, requestBody);
+            NetworkRequestLogger.ResponseInfo responseInfo =
+                new NetworkRequestLogger.ResponseInfo(statusCode, responseHeaders, responseBody);
+
+            // 记录日志
+            requestLogger.logRequestException(requestInfo, responseInfo, exception, methodName);
+        } catch (Exception e) {
+            // 如果日志记录失败，不要影响主流程
+            System.err.println("Failed to log request exception: " + e.getMessage());
+        }
     }
 }
