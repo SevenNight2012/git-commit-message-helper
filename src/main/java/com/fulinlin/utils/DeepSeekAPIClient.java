@@ -2,7 +2,6 @@ package com.fulinlin.utils;
 
 import com.fulinlin.model.AISettings;
 import com.fulinlin.model.ConnectionTestResult;
-import com.intellij.openapi.project.Project;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -37,55 +36,6 @@ public class DeepSeekAPIClient {
     }
 
     /**
-     * 生成commit message（异步），带IDEA通知
-     * @param prompt AI提示词
-     * @param project 当前项目
-     * @return CompletableFuture<String> AI生成内容
-     */
-    public CompletableFuture<String> generateMessage(String prompt, Project project) {
-        return CompletableFuture.supplyAsync(() -> {
-            String requestBody = null;
-            Request request = null;
-            Response response = null;
-
-            try {
-                requestBody = buildRequestBody(prompt);
-                request = new Request.Builder()
-                        .url(settings.getApiEndpoint())
-                        .addHeader("Authorization", "Bearer " + settings.getApiKey())
-                        .addHeader("Content-Type", "application/json")
-                        .post(RequestBody.create(requestBody, MediaType.get("application/json")))
-                        .build();
-
-                response = httpClient.newCall(request).execute();
-                if (!response.isSuccessful()) {
-                    String errorDetails = getErrorDetails(response);
-                    String errorMessage = getErrorMessage(response.code(), errorDetails);
-                    IOException ioException = new IOException(errorMessage);
-
-                    // 记录异常日志
-                    logRequestException(request, response, requestBody, ioException, "generateMessage");
-
-                    throw ioException;
-                }
-                String responseBody = response.body().string();
-                return parseResponse(responseBody);
-            } catch (Exception e) {
-                // 记录异常日志
-                logRequestException(request, response, requestBody, e, "generateMessage");
-
-                String errorMessage = getErrorMessage(e);
-                IDENotificationUtil.notifyError(project, "DeepSeek API调用失败", errorMessage);
-                throw new RuntimeException(errorMessage, e);
-            } finally {
-                if (response != null && response.body() != null) {
-                    response.body().close();
-                }
-            }
-        });
-    }
-
-    /**
      * 生成commit message（异步）
      * @param prompt AI提示词
      * @return CompletableFuture<String> AI生成内容
@@ -117,6 +67,8 @@ public class DeepSeekAPIClient {
                     throw ioException;
                 }
                 String responseBody = response.body().string();
+                // 记录成功日志
+                logRequestSuccess(request, response, requestBody, responseBody, "generateMessage success");
                 return parseResponse(responseBody);
             } catch (Exception e) {
                 // 记录异常日志
@@ -277,6 +229,8 @@ public class DeepSeekAPIClient {
                 }
 
                 String responseBody = response.body().string();
+                // 记录成功日志
+                logRequestSuccess(request, response, requestBody, responseBody, "testConnection success");
                 // 连接测试成功：HTTP状态码为2xx表示请求成功
                 return ConnectionTestResult.success("连接测试成功 (HTTP " + response.code() + ")\n响应内容: " + responseBody);
             } catch (IOException e) {
@@ -296,71 +250,12 @@ public class DeepSeekAPIClient {
     }
 
     /**
-     * 带重试的API调用
-     */
-    public CompletableFuture<String> generateMessageWithRetry(String prompt, int maxRetries) {
-        return generateMessageWithRetry(prompt, maxRetries, 0);
-    }
-
-    private CompletableFuture<String> generateMessageWithRetry(String prompt, int maxRetries, int currentRetry) {
-        return generateMessage(prompt)
-                .exceptionally(error -> {
-                    if (currentRetry < maxRetries && isRetryableError(error)) {
-                        // 延迟重试
-                        try {
-                            Thread.sleep(1000 * (currentRetry + 1)); // 递增延迟
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            throw new RuntimeException("重试被中断", e);
-                        }
-
-                        return generateMessageWithRetry(prompt, maxRetries, currentRetry + 1).join();
-                    } else {
-                        throw new RuntimeException("API调用失败，已重试 " + currentRetry + " 次: " + error.getMessage(), error);
-                    }
-                });
-    }
-
-    /**
      * 关闭客户端，清理资源
      */
     public void close() {
         if (requestLogger != null) {
             requestLogger.shutdown();
         }
-    }
-
-    /**
-     * 判断错误是否可重试
-     */
-    private boolean isRetryableError(Throwable error) {
-        String message = error.getMessage();
-        if (message == null) return false;
-
-        // 网络相关错误可以重试
-        if (message.contains("connect") ||
-            message.contains("Connection refused") ||
-            message.contains("timeout") ||
-            message.contains("SocketTimeoutException") ||
-            message.contains("UnknownHostException")) {
-            return true;
-        }
-
-        // 服务器错误可以重试
-        if (message.contains("500") ||
-            message.contains("Internal Server Error") ||
-            message.contains("502") ||
-            message.contains("503") ||
-            message.contains("504")) {
-            return true;
-        }
-
-        // 频率限制可以重试
-        if (message.contains("429") || message.contains("Too Many Requests")) {
-            return true;
-        }
-
-        return false;
     }
 
     /**
@@ -397,6 +292,27 @@ public class DeepSeekAPIClient {
         } catch (Exception e) {
             // 如果日志记录失败，不要影响主流程
             System.err.println("Failed to log request exception: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 记录网络请求成功日志
+     */
+    private void logRequestSuccess(Request request, Response response, String requestBody,
+            String responseBody, String methodName) {
+        try {
+            String url = request != null ? request.url().toString() : "";
+            String method = request != null ? request.method() : "";
+            String headers = request != null ? request.headers().toString() : "";
+            int statusCode = response != null ? response.code() : -1;
+            String responseHeaders = response != null ? response.headers().toString() : "";
+            NetworkRequestLogger.RequestInfo requestInfo =
+                    new NetworkRequestLogger.RequestInfo(url, method, headers, requestBody);
+            NetworkRequestLogger.ResponseInfo responseInfo =
+                    new NetworkRequestLogger.ResponseInfo(statusCode, responseHeaders, responseBody);
+            requestLogger.logRequestSuccess(requestInfo, responseInfo, methodName);
+        } catch (Exception e) {
+            System.err.println("Failed to log request success: " + e.getMessage());
         }
     }
 }

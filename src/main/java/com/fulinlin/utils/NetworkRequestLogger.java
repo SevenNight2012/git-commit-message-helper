@@ -63,6 +63,25 @@ public class NetworkRequestLogger {
     }
 
     /**
+     * 记录网络请求成功信息
+     * @param requestInfo 请求信息
+     * @param responseInfo 响应信息
+     * @param methodName 方法名
+     */
+    public void logRequestSuccess(@NotNull RequestInfo requestInfo,
+                                  @NotNull ResponseInfo responseInfo,
+                                  @NotNull String methodName) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                String logEntry = buildSuccessLogEntry(requestInfo, responseInfo, methodName);
+                writeLogEntry(logEntry, true);
+            } catch (Exception e) {
+                LOG.warn("Failed to log network request success", e);
+            }
+        }, executorService);
+    }
+
+    /**
      * 构建日志条目
      */
     private String buildLogEntry(RequestInfo requestInfo, ResponseInfo responseInfo,
@@ -102,23 +121,51 @@ public class NetworkRequestLogger {
     }
 
     /**
-     * 写入日志条目到文件
+     * 构建成功日志条目
      */
-    private void writeLogEntry(String logEntry) throws IOException {
-        String today = LocalDate.now().format(DATE_FORMATTER);
-        Path logFile = logDirectory.resolve("network-request-" + today + ".log");
+    private String buildSuccessLogEntry(RequestInfo requestInfo, ResponseInfo responseInfo, String methodName) {
+        StringBuilder sb = new StringBuilder();
+        String timestamp = LocalDate.now().atStartOfDay().format(TIMESTAMP_FORMATTER);
+        sb.append("=== Network Request Success Log ===\n");
+        sb.append("Timestamp: ").append(timestamp).append("\n");
+        sb.append("Method: ").append(methodName).append("\n");
+        // 请求信息
+        sb.append("\n--- Request Information ---\n");
+        sb.append("URL: ").append(requestInfo.getUrl()).append("\n");
+        sb.append("Method: ").append(requestInfo.getMethod()).append("\n");
+        sb.append("Headers: ").append(requestInfo.getHeaders()).append("\n");
+        sb.append("Request Body: ").append(requestInfo.getRequestBody()).append("\n");
+        // 响应信息
+        sb.append("\n--- Response Information ---\n");
+        sb.append("Status Code: ").append(responseInfo.getStatusCode()).append("\n");
+        sb.append("Response Headers: ").append(responseInfo.getHeaders()).append("\n");
+        sb.append("Response Body: ").append(responseInfo.getResponseBody()).append("\n");
+        sb.append("\n=== End Log Entry ===\n\n");
+        return sb.toString();
+    }
 
-        // 确保文件存在，如果不存在则创建
+    /**
+     * 写入日志条目到文件
+     * @param logEntry 日志内容
+     * @param isSuccess 是否为成功日志
+     */
+    private void writeLogEntry(String logEntry, boolean isSuccess) throws IOException {
+        String today = LocalDate.now().format(DATE_FORMATTER);
+        String fileType = isSuccess ? "success" : "fail";
+        Path logFile = logDirectory.resolve("network-request-" + fileType + "-" + today + ".log");
         if (!Files.exists(logFile)) {
             Files.createFile(logFile);
         }
-
-        // 追加写入日志
         try (BufferedWriter writer = Files.newBufferedWriter(logFile, StandardCharsets.UTF_8,
-                                                           java.nio.file.StandardOpenOption.APPEND)) {
+                java.nio.file.StandardOpenOption.APPEND)) {
             writer.write(logEntry);
             writer.flush();
         }
+    }
+
+    // 修改原有失败日志写入调用
+    private void writeLogEntry(String logEntry) throws IOException {
+        writeLogEntry(logEntry, false);
     }
 
     /**
